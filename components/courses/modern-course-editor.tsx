@@ -687,7 +687,6 @@ export function ModernCourseEditor({
                     ? new Types.ObjectId(data.lesson.toString())
                     : new Types.ObjectId(),
                   titleFont: data.titleFont || "Inter",
-                  contentFont: data.titleFont || "Inter", // Use titleFont as contentFont
                   startingCode: data.startingCode || "",
                   solutionCode: data.solutionCode || "",
                   imageUrls: data.imageUrls || [],
@@ -779,7 +778,6 @@ export function ModernCourseEditor({
                     ? new Types.ObjectId(newLessonId)
                     : undefined,
                   titleFont: data.titleFont,
-                  contentFont: data.contentFont,
                   startingCode: data.startingCode,
                   solutionCode: data.solutionCode,
                   backgroundColor: data.backgroundColor,

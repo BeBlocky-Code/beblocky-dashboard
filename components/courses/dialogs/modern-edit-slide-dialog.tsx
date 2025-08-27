@@ -1,7 +1,6 @@
 "use client";
 
 import type React from "react";
-
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -10,29 +9,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Layers,
-  Palette,
-  Code,
-  ImageIcon,
-  Type,
-  Save,
-  Upload,
-  X,
-  BookOpen,
-} from "lucide-react";
+import { Layers, Palette, Code, Type } from "lucide-react";
 import { motion } from "framer-motion";
 import { ILesson } from "@/types/lesson";
 import { toast } from "@/hooks/use-toast";
@@ -43,14 +21,15 @@ import {
   updateSlide,
   type CreateSlideData,
 } from "@/lib/slide-api";
-import MarkdownEditor from "../../markdown/modern-editor";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import remarkSupersub from "remark-supersub";
-import rehypeRaw from "rehype-raw";
-import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import ImagePickerDialog from "@/components/media/image-picker-dialog";
 import { uploadImages } from "@/lib/api/image";
+import {
+  SlideContentTab,
+  SlideInteractiveTab,
+  SlideCodeTab,
+  SlideThemeTab,
+  SlidePreview,
+} from "./slide";
 
 interface ModernEditSlideDialogProps {
   open: boolean;
@@ -100,10 +79,11 @@ export function ModernEditSlideDialog({
 
   useEffect(() => {
     if (slide) {
+      console.log("Setting slide data in edit mode:", slide);
+      console.log("Slide lesson:", slide.lesson);
       setFormData(slide);
-      // Pre-populate uploadedImages with existing imageUrls
       setUploadedImages(slide.imageUrls || []);
-      setSelectedFiles([]); // Only files uploaded in this session
+      setSelectedFiles([]);
     } else {
       setFormData({
         title: "",
@@ -146,6 +126,7 @@ export function ModernEditSlideDialog({
 
         if (response.ok) {
           const lessonsData = await response.json();
+          console.log("Fetched lessons data:", lessonsData);
           setCourseLessons(lessonsData);
         } else {
           console.error("Failed to fetch lessons for course:", courseId);
@@ -159,38 +140,6 @@ export function ModernEditSlideDialog({
       fetchLessons();
     }
   }, [open, courseId]);
-
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
-
-    const fileArray = Array.from(files);
-    setSelectedFiles((prev) => [...prev, ...fileArray]);
-
-    // Create preview URLs for immediate display
-    const previewUrls = fileArray.map((file) => URL.createObjectURL(file));
-    setUploadedImages((prev) => [...prev, ...previewUrls]);
-  };
-
-  const removeImage = (index: number) => {
-    setUploadedImages((prev) => {
-      const newImages = prev.filter((_, i) => i !== index);
-      // If the image is a blob (new upload), revoke the object URL
-      if (prev[index]?.startsWith("blob:")) {
-        URL.revokeObjectURL(prev[index]);
-        setSelectedFiles((files) => files.filter((_, i) => i !== index));
-      } else {
-        // Remove from formData.imageUrls if it's an existing URL
-        // We need to find the correct index in the original imageUrls array
-        const removedUrl = prev[index];
-        setFormData((fd) => ({
-          ...fd,
-          imageUrls: (fd.imageUrls || []).filter((url) => url !== removedUrl),
-        }));
-      }
-      return newImages;
-    });
-  };
 
   const validateForm = () => {
     const errors: string[] = [];
@@ -217,7 +166,6 @@ export function ModernEditSlideDialog({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validate form before submission
     const errors = validateForm();
     if (errors.length > 0) {
       toast({
@@ -231,8 +179,6 @@ export function ModernEditSlideDialog({
     setIsLoading(true);
 
     try {
-      // For edit mode, we need to preserve the current formData.imageUrls
-      // and only add new images from selectedFiles
       let finalImageUrls = formData.imageUrls || [];
 
       if (onComplete) {
@@ -265,26 +211,6 @@ export function ModernEditSlideDialog({
       setIsLoading(false);
     }
   };
-
-  const fontOptions = [
-    "Inter",
-    "Arial",
-    "Helvetica",
-    "Georgia",
-    "Times New Roman",
-    "Courier New",
-  ];
-
-  const sanitizeSchema = {
-    ...defaultSchema,
-    attributes: {
-      ...defaultSchema.attributes,
-      span: [...(defaultSchema.attributes?.span || []), ["style"]],
-      img: [["src"], ["alt"], ["width"], ["height"], ["title"]],
-    },
-    tagNames: [...(defaultSchema.tagNames || []), "span", "img", "sup", "sub"],
-    clobberPrefix: "md-",
-  } as const;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -344,408 +270,37 @@ export function ModernEditSlideDialog({
                 </TabsList>
 
                 <TabsContent value="content" className="space-y-4">
-                  <div>
-                    <Label
-                      htmlFor="title"
-                      className="text-sm font-medium flex items-center gap-2"
-                    >
-                      <Layers className="h-4 w-4" />
-                      Slide Title
-                    </Label>
-                    <Input
-                      id="title"
-                      value={formData.title}
-                      onChange={(e) =>
-                        setFormData({ ...formData, title: e.target.value })
-                      }
-                      placeholder="Enter slide title"
-                      className="mt-2"
-                      required
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label
-                        htmlFor="lessonId"
-                        className="text-sm font-medium flex items-center gap-2"
-                      >
-                        <BookOpen className="h-4 w-4" />
-                        Lesson
-                      </Label>
-                      <Select
-                        value={formData.lesson?._id?.toString() || ""}
-                        onValueChange={(value) =>
-                          setFormData({
-                            ...formData,
-                            lesson: new Types.ObjectId(value),
-                          })
-                        }
-                      >
-                        <SelectTrigger className="mt-2">
-                          <SelectValue placeholder="Select a lesson" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {courseLessons.map((lesson) => (
-                            <SelectItem
-                              key={
-                                (lesson as any)._id?.toString?.() ||
-                                lesson.title
-                              }
-                              value={
-                                (lesson as any)._id?.toString?.() ||
-                                lesson.title
-                              }
-                            >
-                              {lesson.title}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div>
-                      <Label htmlFor="order" className="text-sm font-medium">
-                        Order
-                      </Label>
-                      <Input
-                        id="order"
-                        type="number"
-                        min="1"
-                        value={formData.order}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            order: Number.parseInt(e.target.value) || 1,
-                          })
-                        }
-                        placeholder="1"
-                        className="mt-2"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  {/* Content tab now only holds metadata; interactive markdown editor moved */}
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-sm font-medium">Title Font</Label>
-                      <Select
-                        value={formData.titleFont || "Inter"}
-                        onValueChange={(value) =>
-                          setFormData({ ...formData, titleFont: value })
-                        }
-                      >
-                        <SelectTrigger className="mt-2">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {fontOptions.map((font) => (
-                            <SelectItem key={font} value={font}>
-                              {font}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
+                  <SlideContentTab
+                    formData={formData}
+                    setFormData={setFormData}
+                    courseLessons={courseLessons}
+                  />
                 </TabsContent>
 
                 <TabsContent value="interactive" className="space-y-4">
-                  <div>
-                    <Label
-                      htmlFor="interactive-content"
-                      className="text-sm font-medium"
-                    >
-                      Interactive Content
-                    </Label>
-                    <div className="mt-2">
-                      <MarkdownEditor
-                        value={formData.content || ""}
-                        onChange={(markdown: string) =>
-                          setFormData({ ...formData, content: markdown })
-                        }
-                        availableImageUrls={(formData.imageUrls || []).filter(
-                          (u) => !u.startsWith("blob:")
-                        )}
-                        openImagePicker={() => setIsImagePickerOpen(true)}
-                      />
-                    </div>
-                  </div>
+                  <SlideInteractiveTab
+                    formData={formData}
+                    setFormData={setFormData}
+                    onOpenImagePicker={() => setIsImagePickerOpen(true)}
+                  />
                 </TabsContent>
 
                 <TabsContent value="code" className="space-y-4">
-                  <div>
-                    <Label
-                      htmlFor="startingCode"
-                      className="text-sm font-medium"
-                    >
-                      Starting Code
-                    </Label>
-                    <Textarea
-                      id="startingCode"
-                      value={formData.startingCode || ""}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          startingCode: e.target.value,
-                        })
-                      }
-                      placeholder="Enter starting code for students"
-                      rows={6}
-                      className="mt-2 font-mono text-sm"
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="code" className="text-sm font-medium">
-                      Solution Code
-                    </Label>
-                    <Textarea
-                      id="code"
-                      value={formData.solutionCode || ""}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          solutionCode: e.target.value,
-                        })
-                      }
-                      placeholder="Enter solution code"
-                      rows={6}
-                      className="mt-2 font-mono text-sm"
-                    />
-                  </div>
+                  <SlideCodeTab formData={formData} setFormData={setFormData} />
                 </TabsContent>
 
                 <TabsContent value="theme" className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-sm font-medium">
-                        Background Color
-                      </Label>
-                      <div className="mt-2 flex gap-2">
-                        <Input
-                          type="color"
-                          value={formData.backgroundColor || "#ffffff"}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              backgroundColor: e.target.value,
-                            })
-                          }
-                          className="w-16 h-10 p-1 border rounded"
-                        />
-                        <Input
-                          value={formData.backgroundColor || "#ffffff"}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              backgroundColor: e.target.value,
-                            })
-                          }
-                          placeholder="#ffffff"
-                          className="flex-1"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <Label className="text-sm font-medium">Text Color</Label>
-                      <div className="mt-2 flex gap-2">
-                        <Input
-                          type="color"
-                          value={formData.textColor || "#333333"}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              textColor: e.target.value,
-                            })
-                          }
-                          className="w-16 h-10 p-1 border rounded"
-                        />
-                        <Input
-                          value={formData.textColor || "#333333"}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              textColor: e.target.value,
-                            })
-                          }
-                          placeholder="#333333"
-                          className="flex-1"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <h4 className="font-medium">Theme Colors</h4>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label className="text-sm font-medium">
-                          Main Color
-                        </Label>
-                        <div className="mt-2 flex gap-2">
-                          <Input
-                            type="color"
-                            value={formData.themeColors?.main || "#3b82f6"}
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                themeColors: {
-                                  main: e.target.value,
-                                  secondary:
-                                    formData.themeColors?.secondary ||
-                                    "#64748b",
-                                },
-                              })
-                            }
-                            className="w-16 h-10 p-1 border rounded"
-                          />
-                          <Input
-                            value={formData.themeColors?.main || "#3b82f6"}
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                themeColors: {
-                                  main: e.target.value,
-                                  secondary:
-                                    formData.themeColors?.secondary ||
-                                    "#64748b",
-                                },
-                              })
-                            }
-                            placeholder="#3b82f6"
-                            className="flex-1"
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <Label className="text-sm font-medium">
-                          Secondary Color
-                        </Label>
-                        <div className="mt-2 flex gap-2">
-                          <Input
-                            type="color"
-                            value={formData.themeColors?.secondary || "#64748b"}
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                themeColors: {
-                                  main: formData.themeColors?.main || "#3b82f6",
-                                  secondary: e.target.value,
-                                },
-                              })
-                            }
-                            className="w-16 h-10 p-1 border rounded"
-                          />
-                          <Input
-                            value={formData.themeColors?.secondary || "#64748b"}
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                themeColors: {
-                                  main: formData.themeColors?.main || "#3b82f6",
-                                  secondary: e.target.value,
-                                },
-                              })
-                            }
-                            placeholder="#64748b"
-                            className="flex-1"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                  <SlideThemeTab
+                    formData={formData}
+                    setFormData={setFormData}
+                  />
                 </TabsContent>
               </Tabs>
             </div>
 
             {/* Right Column - Preview */}
             {activeTab !== "interactive" && (
-              <div className="space-y-6">
-                <div className="p-6 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800/50 dark:to-slate-700/50 rounded-2xl border border-slate-200 dark:border-slate-700">
-                  <h4 className="font-semibold mb-4 flex items-center gap-2">
-                    <Layers className="h-4 w-4" />
-                    Slide Preview
-                  </h4>
-
-                  <div
-                    className="w-full h-48 rounded-lg border p-4 flex flex-col justify-start overflow-hidden"
-                    style={{
-                      backgroundColor: formData.backgroundColor || "#ffffff",
-                    }}
-                  >
-                    <h5
-                      className="font-semibold text-lg mb-2"
-                      style={{
-                        color: formData.textColor || "#333333",
-                        fontFamily: formData.titleFont || "Inter",
-                      }}
-                    >
-                      {formData.title || "Slide Title"}
-                    </h5>
-
-                    {formData.content && (
-                      <div className="text-sm opacity-80 prose prose-sm dark:prose-invert overflow-y-auto scrollbar-hide max-h-24">
-                        <ReactMarkdown
-                          remarkPlugins={[remarkGfm, remarkSupersub]}
-                          rehypePlugins={[
-                            rehypeRaw,
-                            [rehypeSanitize, sanitizeSchema] as any,
-                          ]}
-                        >
-                          {formData.content}
-                        </ReactMarkdown>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {(formData.startingCode || formData.solutionCode) && (
-                      <Badge
-                        variant="outline"
-                        className="flex items-center gap-1"
-                      >
-                        <Code className="h-3 w-3" />
-                        Interactive
-                      </Badge>
-                    )}
-                    {formData.imageUrls && formData.imageUrls.length > 0 && (
-                      <Badge
-                        variant="outline"
-                        className="flex items-center gap-1"
-                      >
-                        <ImageIcon className="h-3 w-3" />
-                        Media
-                      </Badge>
-                    )}
-                    {formData.themeColors && (
-                      <Badge
-                        variant="outline"
-                        className="flex items-center gap-1"
-                      >
-                        <Palette className="h-3 w-3" />
-                        Themed
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-
-                <div className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20 rounded-xl p-6 border border-blue-200 dark:border-blue-800/30">
-                  <h4 className="font-semibold text-blue-800 dark:text-blue-200 mb-2">
-                    💡 Slide Tips
-                  </h4>
-                  <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
-                    <li>• Keep titles concise and descriptive</li>
-                    <li>• Use code slides for interactive learning</li>
-                    <li>• Add images to enhance visual appeal</li>
-                    <li>• Maintain consistent theme colors</li>
-                  </ul>
-                </div>
-              </div>
+              <SlidePreview formData={formData} />
             )}
           </div>
 
@@ -783,6 +338,7 @@ export function ModernEditSlideDialog({
             </Button>
           </div>
         </form>
+
         <ImagePickerDialog
           open={isImagePickerOpen}
           onOpenChange={setIsImagePickerOpen}
@@ -791,7 +347,6 @@ export function ModernEditSlideDialog({
           )}
           onUploadFiles={async (files) => {
             const urls = await uploadImages(files);
-            // Add to formData.imageUrls immediately so we persist on save
             setFormData((fd) => ({
               ...fd,
               imageUrls: Array.from(
