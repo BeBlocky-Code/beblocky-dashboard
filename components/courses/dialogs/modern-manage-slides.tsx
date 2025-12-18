@@ -16,18 +16,10 @@ import {
   ImageIcon,
   Code,
   Type,
-  MoreVertical,
   Eye,
   Copy,
   Palette,
 } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
 import { motion, AnimatePresence } from "framer-motion";
 import { ISlide } from "@/types/slide";
 import { formatRelativeTime } from "@/lib/utils";
@@ -298,36 +290,24 @@ function ModernSlideCard({
             alt={slide.title}
             className="object-cover w-full h-full"
           />
-          {/* Actions Menu Overlay */}
-          <div className="absolute top-3 right-3 z-10">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 bg-black/70 hover:bg-black/90 text-white border-none shadow"
-                >
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem
-                  onClick={onEdit}
-                  className="flex items-center"
-                >
-                  <Edit2 className="h-4 w-4 mr-2" />
-                  Edit Slide
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={onDelete}
-                  className="flex items-center text-destructive"
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete Slide
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+          {/* Action Buttons */}
+          <div className="absolute top-3 right-3 z-10 flex gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onEdit}
+              className="h-8 w-8 bg-black/70 hover:bg-black/90 text-white border-none shadow transition-all"
+            >
+              <Edit2 className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onDelete}
+              className="h-8 w-8 bg-black/70 hover:bg-red-600/90 text-white border-none shadow transition-all"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
           </div>
         </div>
       )}
@@ -351,36 +331,24 @@ function ModernSlideCard({
             </Badge>
           </div>
 
-          {/* Actions Menu */}
-          <div className="absolute top-3 right-3 z-10">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 bg-black/70 hover:bg-black/90 text-white border-none shadow"
-                >
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem
-                  onClick={onEdit}
-                  className="flex items-center"
-                >
-                  <Edit2 className="h-4 w-4 mr-2" />
-                  Edit Slide
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={onDelete}
-                  className="flex items-center text-destructive"
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete Slide
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+          {/* Action Buttons */}
+          <div className="absolute top-3 right-3 z-10 flex gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onEdit}
+              className="h-8 w-8 bg-black/70 hover:bg-black/90 text-white border-none shadow transition-all"
+            >
+              <Edit2 className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onDelete}
+              className="h-8 w-8 bg-black/70 hover:bg-red-600/90 text-white border-none shadow transition-all"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
           </div>
         </div>
       )}

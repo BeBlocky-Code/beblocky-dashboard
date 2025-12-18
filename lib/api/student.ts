@@ -204,4 +204,23 @@ export const studentApi = {
       };
     }
   },
+
+  // Get all students (admin only)
+  async getAllStudents(): Promise<IStudent[]> {
+    try {
+      const response = await fetch(getApiUrl("/students"), {
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        console.warn("Students API not available, returning empty array");
+        return [];
+      }
+
+      return response.json();
+    } catch (error) {
+      console.warn("Students API error, returning empty array:", error);
+      return [];
+    }
+  },
 };
