@@ -2,12 +2,12 @@
 
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import remarkSupersub from "remark-supersub";
-import rehypeRaw from "rehype-raw";
-import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
+import { marked, type TokensList, type Tokens } from "marked";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { oneDark, oneLight } from "react-syntax-highlighter/dist/esm/styles/prism";
+import DOMPurify from "dompurify";
 import { motion, AnimatePresence } from "framer-motion";
+import Fuse from "fuse.js";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,10 +25,15 @@ import {
   Eye,
   Edit3,
   Sparkles,
-  Palette,
   Type,
+  Heading1,
+  Heading2,
+  Heading3,
+  List,
+  ListOrdered,
+  Quote,
+  Link as LinkIcon,
 } from "lucide-react";
-import { Heading1 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -41,6 +46,13 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Command,
+  CommandEmpty,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { useTheme } from "next-themes";
 
 type MarkdownEditorProps = {
   value: string;
@@ -50,15 +62,31 @@ type MarkdownEditorProps = {
   openImagePicker?: () => void;
 };
 
-const sanitizeSchema = {
-  ...defaultSchema,
-  attributes: {
-    ...defaultSchema.attributes,
-    span: [...(defaultSchema.attributes?.span || []), ["style"]],
-    img: [["src"], ["alt"], ["width"], ["height"], ["title"]],
-  },
-  tagNames: [...(defaultSchema.tagNames || []), "span", "img", "sup", "sub"],
-  clobberPrefix: "md-",
+type SlashCommand = {
+  title: string;
+  description: string;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+  searchTerms: string[];
+  command: () => void;
+};
+
+
+const HtmlAllowedTags = [
+  "span",
+  "img",
+  "sup",
+  "sub",
+  "br",
+];
+
+const decodeHtmlEntities = (input?: string) => {
+  if (!input) return "";
+  return input
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, "\"")
+    .replace(/&#39;/g, "'");
 };
 
 export default function MarkdownEditor({
@@ -69,6 +97,8 @@ export default function MarkdownEditor({
   openImagePicker,
 }: MarkdownEditorProps) {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const slashMenuRef = useRef<HTMLDivElement | null>(null);
+  const floatingToolbarRef = useRef<HTMLDivElement | null>(null);
   const [localValue, setLocalValue] = useState<string>(value || "");
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [isCodeDialogOpen, setIsCodeDialogOpen] = useState(false);
@@ -83,6 +113,15 @@ export default function MarkdownEditor({
   );
   const [isToolbarHovered, setIsToolbarHovered] = useState(false);
   const [selectedColor, setSelectedColor] = useState("#000000");
+  const [showSlashMenu, setShowSlashMenu] = useState(false);
+  const [slashQuery, setSlashQuery] = useState("");
+  const [slashPosition, setSlashPosition] = useState({ top: 0, left: 0 });
+  const [showFloatingToolbar, setShowFloatingToolbar] = useState(false);
+  const [floatingToolbarPosition, setFloatingToolbarPosition] = useState({
+    top: 0,
+    left: 0,
+  });
+  const { theme } = useTheme();
 
   useEffect(() => {
     setLocalValue(value || "");
@@ -124,7 +163,7 @@ export default function MarkdownEditor({
   );
 
   const insertAtCursor = useCallback(
-    (snippet: string) => {
+    (snippet: string, selectAfter = false) => {
       const textarea = textareaRef.current;
       if (!textarea) {
         updateValue(localValue + snippet);
@@ -135,9 +174,13 @@ export default function MarkdownEditor({
       const next = localValue.slice(0, start) + snippet + localValue.slice(end);
       updateValue(next);
       requestAnimationFrame(() => {
-        const cursorPos = start + snippet.length;
-        textarea.focus();
-        textarea.setSelectionRange(cursorPos, cursorPos);
+        if (selectAfter) {
+          textarea.setSelectionRange(start, start + snippet.length);
+        } else {
+          const cursorPos = start + snippet.length;
+          textarea.focus();
+          textarea.setSelectionRange(cursorPos, cursorPos);
+        }
       });
     },
     [localValue, updateValue]
@@ -162,33 +205,35 @@ export default function MarkdownEditor({
       );
   }, [insertAtCursor]);
 
-  const insertBold = () => wrapSelection("**", "**", "bold");
-  const insertItalic = () => wrapSelection("_", "_", "italic");
+  // Convert toolbar functions to markdown syntax
+  const insertBold = () => wrapSelection("**", "**", "bold text");
+  const insertItalic = () => wrapSelection("*", "*", "italic text");
   const insertSuperscript = () => wrapSelection("<sup>", "</sup>", "x²");
   const insertColor = (color: string) => {
     setSelectedColor(color);
     wrapSelection(`<span style="color:${color}">`, "</span>", "colored text");
   };
-  const insertHeading = () => {
+  
+  const insertHeading = (level: 1 | 2 | 3 = 1) => {
     const textarea = textareaRef.current;
     if (!textarea) {
-      updateValue(`# ${localValue}`);
+      updateValue(`${"#".repeat(level)} ${localValue}`);
       return;
     }
     const start = textarea.selectionStart ?? 0;
     const end = textarea.selectionEnd ?? 0;
-    // Determine the start of the line for the current selection
     const beforeSelection = localValue.slice(0, start);
     const afterSelection = localValue.slice(end);
     const selectedText = localValue.slice(start, end) || "Heading";
     const lineStart = beforeSelection.lastIndexOf("\n") + 1;
     const linePrefix = localValue.slice(0, lineStart);
     const lineRemainderBefore = localValue.slice(lineStart, start);
-    const next = `${linePrefix}# ${lineRemainderBefore}${selectedText}${afterSelection}`;
+    const headingPrefix = "#".repeat(level) + " ";
+    const next = `${linePrefix}${headingPrefix}${lineRemainderBefore}${selectedText}${afterSelection}`;
     updateValue(next);
     requestAnimationFrame(() => {
       const newCursor =
-        lineStart + 2 + lineRemainderBefore.length + selectedText.length;
+        lineStart + headingPrefix.length + lineRemainderBefore.length + selectedText.length;
       textarea.focus();
       textarea.setSelectionRange(newCursor, newCursor);
     });
@@ -213,9 +258,72 @@ export default function MarkdownEditor({
     });
   };
 
+  const insertInlineCode = () => {
+    wrapSelection("`", "`", "code");
+  };
+
+  const insertList = (ordered = false) => {
+    const textarea = textareaRef.current;
+    if (!textarea) {
+      updateValue(ordered ? "\n1. Item\n" : "\n- Item\n");
+      return;
+    }
+    const start = textarea.selectionStart ?? localValue.length;
+    const beforeSelection = localValue.slice(0, start);
+    const lineStart = beforeSelection.lastIndexOf("\n") + 1;
+    const prefix = ordered ? "1. " : "- ";
+    const snippet = `\n${prefix}${localValue.slice(start)}`;
+    const next = localValue.slice(0, lineStart) + snippet;
+    updateValue(next);
+    requestAnimationFrame(() => {
+      const cursorPos = lineStart + snippet.length;
+      textarea.focus();
+      textarea.setSelectionRange(cursorPos, cursorPos);
+    });
+  };
+
+  const insertQuote = () => {
+    const textarea = textareaRef.current;
+    if (!textarea) {
+      updateValue("\n> Quote\n");
+      return;
+    }
+    const start = textarea.selectionStart ?? localValue.length;
+    const end = textarea.selectionEnd ?? localValue.length;
+    const selected = localValue.slice(start, end) || "Quote";
+    const snippet = `\n> ${selected}\n`;
+    const next = localValue.slice(0, start) + snippet + localValue.slice(end);
+    updateValue(next);
+    requestAnimationFrame(() => {
+      const cursorPos = start + snippet.length;
+      textarea.focus();
+      textarea.setSelectionRange(cursorPos, cursorPos);
+    });
+  };
+
+  const insertLink = () => {
+    const textarea = textareaRef.current;
+    if (!textarea) {
+      insertAtCursor("[link text](https://example.com)");
+      return;
+    }
+    const start = textarea.selectionStart ?? localValue.length;
+    const end = textarea.selectionEnd ?? localValue.length;
+    const selected = localValue.slice(start, end) || "link text";
+    const snippet = `[${selected}](https://example.com)`;
+    const next = localValue.slice(0, start) + snippet + localValue.slice(end);
+    updateValue(next);
+    requestAnimationFrame(() => {
+      const cursorPos = start + snippet.indexOf("(https") + 1;
+      textarea.focus();
+      textarea.setSelectionRange(cursorPos, cursorPos + "https://example.com".length);
+    });
+  };
+
+  const insertBreak = () => insertAtCursor("\n\n---\n\n");
+
   const openCodeDialog = () => {
     const textarea = textareaRef.current;
-    // Prefill with selection if any
     if (textarea) {
       const start = textarea.selectionStart ?? 0;
       const end = textarea.selectionEnd ?? 0;
@@ -259,38 +367,6 @@ export default function MarkdownEditor({
     closeCodeDialog();
   };
 
-  // Inline purple code wrapper without spaces/newlines
-  const insertInlinePurpleCode = () => {
-    const textarea = textareaRef.current;
-    if (!textarea) {
-      // Fallback to dialog if no textarea
-      openCodeDialog();
-      return;
-    }
-    const start = textarea.selectionStart ?? localValue.length;
-    const end = textarea.selectionEnd ?? localValue.length;
-    if (start === end) {
-      // No selection -> open dialog
-      openCodeDialog();
-      return;
-    }
-    const selected = localValue.slice(start, end);
-    const before = `<span style="color:#9932cc">\`\`\``;
-    const after = `\`\`\`</span>`;
-    const next =
-      localValue.slice(0, start) +
-      before +
-      selected +
-      after +
-      localValue.slice(end);
-    updateValue(next);
-    requestAnimationFrame(() => {
-      const cursorPos = start + before.length + selected.length + after.length;
-      textarea.focus();
-      textarea.setSelectionRange(cursorPos, cursorPos);
-    });
-  };
-  const insertBreak = () => insertAtCursor("\n<br>\n");
   const openLocalPicker = () => setIsPickerOpen(true);
   const closeLocalPicker = () => setIsPickerOpen(false);
 
@@ -312,6 +388,298 @@ export default function MarkdownEditor({
     setImgAlt("");
   };
 
+  // Handle removing slash command text before inserting command
+  const removeSlashCommand = useCallback(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const cursorPos = textarea.selectionStart;
+    const textBeforeCursor = localValue.slice(0, cursorPos);
+    const lastLine = textBeforeCursor.split("\n").pop() || "";
+
+    if (lastLine.startsWith("/")) {
+      const lineStart = textBeforeCursor.lastIndexOf("\n") + 1;
+      const textAfterCursor = localValue.slice(cursorPos);
+      const newValue = localValue.slice(0, lineStart) + textAfterCursor;
+      updateValue(newValue);
+      
+      // Set cursor position after removing slash command
+      requestAnimationFrame(() => {
+        textarea.focus();
+        textarea.setSelectionRange(lineStart, lineStart);
+      });
+    }
+  }, [localValue, updateValue]);
+
+  // Slash commands
+  const slashCommands: SlashCommand[] = useMemo(
+    () => [
+      {
+        title: "Heading 1",
+        description: "Big section heading",
+        icon: Heading1,
+        searchTerms: ["h1", "heading", "title", "big"],
+        command: () => {
+          removeSlashCommand();
+          insertHeading(1);
+          setShowSlashMenu(false);
+        },
+      },
+      {
+        title: "Heading 2",
+        description: "Medium section heading",
+        icon: Heading2,
+        searchTerms: ["h2", "heading", "subtitle", "medium"],
+        command: () => {
+          removeSlashCommand();
+          insertHeading(2);
+          setShowSlashMenu(false);
+        },
+      },
+      {
+        title: "Heading 3",
+        description: "Small section heading",
+        icon: Heading3,
+        searchTerms: ["h3", "heading", "subtitle", "small"],
+        command: () => {
+          removeSlashCommand();
+          insertHeading(3);
+          setShowSlashMenu(false);
+        },
+      },
+      {
+        title: "Bold",
+        description: "Make text bold",
+        icon: Bold,
+        searchTerms: ["bold", "strong", "b"],
+        command: () => {
+          removeSlashCommand();
+          insertBold();
+          setShowSlashMenu(false);
+        },
+      },
+      {
+        title: "Italic",
+        description: "Make text italic",
+        icon: Italic,
+        searchTerms: ["italic", "emphasis", "i"],
+        command: () => {
+          removeSlashCommand();
+          insertItalic();
+          setShowSlashMenu(false);
+        },
+      },
+      {
+        title: "Code Block",
+        description: "Insert a code block",
+        icon: Code,
+        searchTerms: ["code", "block", "snippet"],
+        command: () => {
+          removeSlashCommand();
+          insertCodeBlock();
+          setShowSlashMenu(false);
+        },
+      },
+      {
+        title: "Inline Code",
+        description: "Insert inline code",
+        icon: Code,
+        searchTerms: ["code", "inline", "backtick"],
+        command: () => {
+          removeSlashCommand();
+          insertInlineCode();
+          setShowSlashMenu(false);
+        },
+      },
+      {
+        title: "Bullet List",
+        description: "Create a bullet list",
+        icon: List,
+        searchTerms: ["list", "bullet", "unordered"],
+        command: () => {
+          removeSlashCommand();
+          insertList(false);
+          setShowSlashMenu(false);
+        },
+      },
+      {
+        title: "Numbered List",
+        description: "Create a numbered list",
+        icon: ListOrdered,
+        searchTerms: ["list", "numbered", "ordered", "number"],
+        command: () => {
+          removeSlashCommand();
+          insertList(true);
+          setShowSlashMenu(false);
+        },
+      },
+      {
+        title: "Quote",
+        description: "Insert a blockquote",
+        icon: Quote,
+        searchTerms: ["quote", "blockquote", "citation"],
+        command: () => {
+          removeSlashCommand();
+          insertQuote();
+          setShowSlashMenu(false);
+        },
+      },
+      {
+        title: "Link",
+        description: "Insert a link",
+        icon: LinkIcon,
+        searchTerms: ["link", "url", "href", "anchor"],
+        command: () => {
+          removeSlashCommand();
+          insertLink();
+          setShowSlashMenu(false);
+        },
+      },
+      {
+        title: "Image",
+        description: "Insert an image",
+        icon: ImageIcon,
+        searchTerms: ["image", "img", "picture", "photo"],
+        command: () => {
+          removeSlashCommand();
+          setShowSlashMenu(false);
+          openImagePicker ? openImagePicker() : openLocalPicker();
+        },
+      },
+      {
+        title: "Horizontal Rule",
+        description: "Insert a horizontal rule",
+        icon: Minus,
+        searchTerms: ["hr", "rule", "divider", "separator"],
+        command: () => {
+          removeSlashCommand();
+          insertBreak();
+          setShowSlashMenu(false);
+        },
+      },
+    ],
+    [removeSlashCommand]
+  );
+
+  // Filter slash commands based on query
+  const filteredSlashCommands = useMemo(() => {
+    if (!slashQuery) return slashCommands;
+    const fuse = new Fuse(slashCommands, {
+      keys: ["title", "description", "searchTerms"],
+      threshold: 0.3,
+      minMatchCharLength: 1,
+    });
+    return fuse.search(slashQuery).map((result) => result.item);
+  }, [slashQuery, slashCommands]);
+
+  // Handle slash command menu
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const handleInput = (e: KeyboardEvent | React.KeyboardEvent) => {
+      const target = e.target as HTMLTextAreaElement;
+      if (target !== textarea) return;
+
+      const cursorPos = textarea.selectionStart;
+      const textBeforeCursor = localValue.slice(0, cursorPos);
+      const lastLine = textBeforeCursor.split("\n").pop() || "";
+
+      if (lastLine === "/" || (lastLine.startsWith("/") && !lastLine.includes(" ") && !lastLine.endsWith(" "))) {
+        const query = lastLine.slice(1);
+        setSlashQuery(query);
+        
+        // Calculate position for slash menu
+        const textareaRect = textarea.getBoundingClientRect();
+        const lineHeight = parseInt(getComputedStyle(textarea).lineHeight) || 20;
+        const lines = textBeforeCursor.split("\n").length;
+        const top = textareaRect.top + (lines * lineHeight) + 25;
+        const left = textareaRect.left + 20;
+
+        setSlashPosition({ top, left });
+        setShowSlashMenu(true);
+      } else {
+        setShowSlashMenu(false);
+      }
+    };
+
+    textarea.addEventListener("keyup", handleInput as EventListener);
+    return () => {
+      textarea.removeEventListener("keyup", handleInput as EventListener);
+    };
+  }, [localValue]);
+
+  // Handle floating toolbar on selection
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const handleSelection = () => {
+      const selection = window.getSelection();
+      const selectedText = selection?.toString().trim();
+
+      if (selectedText && textarea.selectionStart !== textarea.selectionEnd) {
+        // Calculate position above selection
+        const start = textarea.selectionStart;
+        const textBefore = localValue.slice(0, start);
+        const lines = textBefore.split("\n").length;
+        const lineHeight = parseInt(getComputedStyle(textarea).lineHeight) || 20;
+        
+        // Get approximate position (this is a simplified version)
+        const textareaRect = textarea.getBoundingClientRect();
+        const top = textareaRect.top + (lines * lineHeight) - 40;
+        const left = textareaRect.left + 20;
+
+        setFloatingToolbarPosition({ top, left });
+        setShowFloatingToolbar(true);
+      } else {
+        setShowFloatingToolbar(false);
+      }
+    };
+
+    textarea.addEventListener("mouseup", handleSelection);
+    textarea.addEventListener("keyup", handleSelection);
+    textarea.addEventListener("select", handleSelection);
+
+    return () => {
+      textarea.removeEventListener("mouseup", handleSelection);
+      textarea.removeEventListener("keyup", handleSelection);
+      textarea.removeEventListener("select", handleSelection);
+    };
+  }, [localValue]);
+
+  // Auto-close pairs
+  const handleAutoClose = useCallback(
+    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      const textarea = e.currentTarget;
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+
+      if (start !== end) return; // Don't auto-close if text is selected
+
+      const pairs: Record<string, string> = {
+        "`": "`",
+        "*": "*",
+        "_": "_",
+        "[": "]",
+      };
+
+      const char = e.key;
+      if (pairs[char]) {
+        e.preventDefault();
+        const before = localValue.slice(0, start);
+        const after = localValue.slice(end);
+        const next = before + char + pairs[char] + after;
+        updateValue(next);
+        requestAnimationFrame(() => {
+          textarea.focus();
+          textarea.setSelectionRange(start + 1, start + 1);
+        });
+      }
+    },
+    [localValue, updateValue]
+  );
+
   const onDrop = useCallback(
     (e: React.DragEvent<HTMLTextAreaElement>) => {
       e.preventDefault();
@@ -327,6 +695,23 @@ export default function MarkdownEditor({
 
   const onKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      // Handle Escape to close menus
+      if (e.key === "Escape") {
+        setShowSlashMenu(false);
+        setShowFloatingToolbar(false);
+        return;
+      }
+
+      // Handle slash menu navigation
+      if (showSlashMenu && (e.key === "ArrowDown" || e.key === "ArrowUp" || e.key === "Enter")) {
+        e.preventDefault();
+        return;
+      }
+
+      // Auto-close pairs
+      handleAutoClose(e);
+
+      // Keyboard shortcuts
       const isMod = e.ctrlKey || e.metaKey;
       if (isMod && (e.key === "b" || e.key === "B")) {
         e.preventDefault();
@@ -336,20 +721,38 @@ export default function MarkdownEditor({
         e.preventDefault();
         insertItalic();
       }
+      if (isMod && e.key === "k") {
+        e.preventDefault();
+        insertLink();
+      }
     },
-    []
+    [showSlashMenu, handleAutoClose, insertBold, insertItalic, insertLink]
   );
 
-  const rehypePlugins = useMemo(
-    () => [rehypeRaw, [rehypeSanitize, sanitizeSchema] as any],
-    []
+  // Configure marked
+  useEffect(() => {
+    marked.setOptions({
+      breaks: true,
+      gfm: true,
+    });
+  }, []);
+
+  // Parse markdown tokens for rendering
+  const parsedTokens = useMemo<TokensList>(() => {
+    const value = localValue?.length ? localValue : "*Start typing to see your preview...*";
+    return marked.lexer(value);
+  }, [localValue]);
+
+  const renderedMarkdown = useMemo(
+    () => renderMarkdownTokens(parsedTokens, theme),
+    [parsedTokens, theme]
   );
 
   const toolbarButtons = [
     {
       icon: Heading1,
-      action: insertHeading,
-      tooltip: "Title (H1)",
+      action: () => insertHeading(1),
+      tooltip: "Heading 1",
       shortcut: "",
     },
     {
@@ -372,11 +775,11 @@ export default function MarkdownEditor({
     },
     {
       icon: Code,
-      action: insertInlinePurpleCode,
-      tooltip: "Code Snippet",
+      action: openCodeDialog,
+      tooltip: "Code Block",
       shortcut: "",
     },
-    { icon: Minus, action: insertBreak, tooltip: "Line Break", shortcut: "" },
+    { icon: Minus, action: insertBreak, tooltip: "Horizontal Rule (---)", shortcut: "" },
   ];
 
   return (
@@ -442,11 +845,19 @@ export default function MarkdownEditor({
                     Preview
                   </label>
                   <div className="w-full h-56 p-3 bg-slate-950/90 text-slate-100 rounded-md overflow-auto">
-                    <pre className="text-xs leading-5">
-                      <code>
-                        {codeInput || "// Your code preview will appear here"}
-                      </code>
-                    </pre>
+                    {codeInput ? (
+                      <SyntaxHighlighter
+                        language={codeLanguage === "auto" ? guessLanguage(codeInput) || "text" : codeLanguage}
+                        style={theme === "dark" ? oneDark : oneLight}
+                        customStyle={{ margin: 0, background: "transparent" }}
+                      >
+                        {codeInput}
+                      </SyntaxHighlighter>
+                    ) : (
+                      <pre className="text-xs leading-5 text-muted-foreground">
+                        <code>// Your code preview will appear here</code>
+                      </pre>
+                    )}
                   </div>
                 </div>
               </div>
@@ -470,6 +881,97 @@ export default function MarkdownEditor({
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Slash Command Menu */}
+        {showSlashMenu && (
+          <div
+            ref={slashMenuRef}
+            className="fixed z-50"
+            style={{
+              top: `${slashPosition.top}px`,
+              left: `${slashPosition.left}px`,
+            }}
+          >
+            <Command className="w-64 border shadow-lg bg-popover">
+              <CommandList>
+                <CommandEmpty>No commands found</CommandEmpty>
+                {filteredSlashCommands.map((cmd) => (
+                  <CommandItem
+                    key={cmd.title}
+                    onSelect={() => cmd.command()}
+                    className="flex items-center gap-3 cursor-pointer"
+                  >
+                    <div className="flex size-8 shrink-0 items-center justify-center rounded border bg-secondary">
+                      <cmd.icon size={16} className="text-muted-foreground" />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="font-medium text-sm">{cmd.title}</span>
+                      <span className="text-muted-foreground text-xs">
+                        {cmd.description}
+                      </span>
+                    </div>
+                  </CommandItem>
+                ))}
+              </CommandList>
+            </Command>
+          </div>
+        )}
+
+        {/* Floating Toolbar */}
+        <AnimatePresence>
+          {showFloatingToolbar && (
+            <motion.div
+              ref={floatingToolbarRef}
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="fixed z-50 flex items-center gap-1 rounded-lg border bg-background p-1 shadow-lg"
+              style={{
+                top: `${floatingToolbarPosition.top}px`,
+                left: `${floatingToolbarPosition.left}px`,
+              }}
+            >
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={insertBold}
+                className="h-8 w-8 p-0"
+              >
+                <Bold className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={insertItalic}
+                className="h-8 w-8 p-0"
+              >
+                <Italic className="h-4 w-4" />
+              </Button>
+              <Separator orientation="vertical" className="h-6" />
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={insertInlineCode}
+                className="h-8 w-8 p-0"
+              >
+                <Code className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={insertLink}
+                className="h-8 w-8 p-0"
+              >
+                <LinkIcon className="h-4 w-4" />
+              </Button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Enhanced Toolbar */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
@@ -495,11 +997,7 @@ export default function MarkdownEditor({
                             variant="ghost"
                             size="sm"
                             onClick={button.action}
-                            className={`h-9 w-9 p-0 hover:bg-primary/10 transition-all duration-200 ${
-                              button.icon === Code
-                                ? "text-[#80ff80] hover:text-[#80ff80]/80"
-                                : "hover:text-primary"
-                            }`}
+                            className="h-9 w-9 p-0 hover:bg-primary/10 transition-all duration-200 hover:text-primary"
                           >
                             <button.icon className="h-4 w-4" />
                           </Button>
@@ -663,13 +1161,12 @@ export default function MarkdownEditor({
 ✨ Use **bold** and *italic* text
 🎨 Add colors with the palette tool
 📷 Insert images with drag & drop
-⌨️ Use Ctrl/Cmd+B for bold, Ctrl/Cmd+I for italic"
+⌨️ Use Ctrl/Cmd+B for bold, Ctrl/Cmd+I for italic
+💡 Type / for commands"
                     />
                   </motion.div>
                 )}
               </AnimatePresence>
-
-              {/* Separator removed to keep two grid items side-by-side in split mode */}
 
               {/* Preview Pane */}
               <AnimatePresence>
@@ -690,13 +1187,8 @@ export default function MarkdownEditor({
                         Preview
                       </Badge>
                     </div>
-                    <div className="h-80 p-6 pt-16 overflow-auto prose prose-sm dark:prose-invert max-w-none prose-headings:text-slate-900 dark:prose-headings:text-white prose-p:text-slate-700 dark:prose-p:text-slate-300 min-h-[320px] prose-img:max-w-full prose-img:h-auto prose-pre:overflow-auto">
-                      <ReactMarkdown
-                        remarkPlugins={[remarkGfm, remarkSupersub]}
-                        rehypePlugins={rehypePlugins as any}
-                      >
-                        {localValue || "*Start typing to see your preview...*"}
-                      </ReactMarkdown>
+                    <div className="h-80 p-6 pt-16 overflow-auto prose prose-sm dark:prose-invert max-w-none prose-headings:text-slate-900 dark:prose-headings:text-white prose-p:text-slate-700 dark:prose-p:text-slate-300 min-h-[320px] prose-img:max-w-full prose-img:h-auto">
+                      {renderedMarkdown}
                     </div>
                   </motion.div>
                 )}
@@ -844,4 +1336,188 @@ export default function MarkdownEditor({
       </div>
     </TooltipProvider>
   );
+}
+function renderMarkdownTokens(tokens: TokensList, theme?: string): React.ReactNode {
+  const renderInline = (inlineTokens?: Tokens.Generic[]): React.ReactNode => {
+    if (!inlineTokens) return null;
+    return inlineTokens.map((token, index) => {
+      switch (token.type) {
+        case "strong":
+          return <strong key={`strong-${index}`}>{renderInline(token.tokens)}</strong>;
+        case "em":
+          return <em key={`em-${index}`}>{renderInline(token.tokens)}</em>;
+        case "codespan":
+          return (
+            <code key={`codespan-${index}`} className="rounded bg-muted px-1 py-0.5">
+              {decodeHtmlEntities(token.text)}
+            </code>
+          );
+        case "link":
+          return (
+            <a key={`link-${index}`} href={token.href || "#"} target="_blank" rel="noreferrer" className="text-blue-600 dark:text-blue-400 underline">
+              {renderInline(token.tokens)}
+            </a>
+          );
+        case "image":
+          if (!token.href) return null;
+          return (
+            <img
+              key={`img-${index}`}
+              src={token.href}
+              alt={token.text || ""}
+              className="inline-block max-w-full h-auto"
+            />
+          );
+        case "br":
+          return <br key={`br-${index}`} />;
+        case "del":
+          return <del key={`del-${index}`}>{renderInline(token.tokens)}</del>;
+        case "html": {
+          if (!HtmlAllowedTags.some((tag) => token.text?.includes(`<${tag}`))) {
+            return null;
+          }
+          return (
+            <span
+              key={`inline-html-${index}`}
+              dangerouslySetInnerHTML={{
+                __html:
+                  typeof window !== "undefined"
+                    ? DOMPurify.sanitize(token.text || "", {
+                        ALLOWED_TAGS: HtmlAllowedTags,
+                        ALLOWED_ATTR: ["style", "src", "alt", "width", "height", "title"],
+                      })
+                    : token.text || "",
+              }}
+            />
+          );
+        }
+        case "text":
+          if (token.tokens) {
+            return <span key={`text-${index}`}>{renderInline(token.tokens)}</span>;
+          }
+          return <span key={`text-${index}`}>{decodeHtmlEntities(token.text)}</span>;
+        default:
+          return token.raw ?? null;
+      }
+    });
+  };
+
+  const renderBlocks = (blockTokens: TokensList): React.ReactNode => {
+    return blockTokens.map((token, index) => {
+      switch (token.type) {
+        case "heading": {
+          const Tag = `h${token.depth}` as keyof JSX.IntrinsicElements;
+          return (
+            <Tag key={`heading-${index}`} className="font-semibold mt-4">
+              {renderInline(token.tokens)}
+            </Tag>
+          );
+        }
+        case "paragraph":
+          return (
+            <p key={`paragraph-${index}`} className="mt-2">
+              {renderInline(token.tokens)}
+            </p>
+          );
+        case "text":
+          return (
+            <p key={`text-block-${index}`} className="mt-2">
+              {renderInline(token.tokens)}
+            </p>
+          );
+        case "list": {
+          const ListTag = token.ordered ? "ol" : "ul";
+          return (
+            <ListTag
+              key={`list-${index}`}
+              className={`ml-6 mt-2 ${token.ordered ? "list-decimal" : "list-disc"}`}
+            >
+              {token.items.map((item, itemIndex) => (
+                <li key={`list-item-${index}-${itemIndex}`} className="mb-1">
+                  {renderInline(item.tokens)}
+                  {item.tokens && item.tokens.length === 0 && item.text}
+                </li>
+              ))}
+            </ListTag>
+          );
+        }
+        case "blockquote":
+          return (
+            <blockquote
+              key={`blockquote-${index}`}
+              className="border-l-4 border-muted pl-4 italic my-4 text-muted-foreground"
+            >
+              {renderInline(token.tokens)}
+            </blockquote>
+          );
+        case "code":
+          return (
+            <div key={`code-${index}`} className="my-4">
+              <SyntaxHighlighter
+                language={token.lang || "text"}
+                style={theme === "dark" ? oneDark : oneLight}
+                customStyle={{
+                  margin: 0,
+                  borderRadius: "0.375rem",
+                  fontSize: "0.875rem",
+                }}
+                PreTag="div"
+              >
+                {decodeHtmlEntities(token.text)}
+              </SyntaxHighlighter>
+            </div>
+          );
+        case "hr":
+          return <hr key={`hr-${index}`} className="my-6 border-muted" />;
+        case "html": {
+          return (
+            <div
+              key={`html-${index}`}
+              dangerouslySetInnerHTML={{
+                __html:
+                  typeof window !== "undefined"
+                    ? DOMPurify.sanitize(token.text || "", {
+                        ALLOWED_TAGS: ["p", "div", ...HtmlAllowedTags],
+                        ALLOWED_ATTR: ["style", "src", "alt", "width", "height", "title"],
+                      })
+                    : token.text || "",
+              }}
+            />
+          );
+        }
+        case "table": {
+          return (
+            <div key={`table-${index}`} className="my-4 overflow-x-auto">
+              <table className="w-full text-sm border border-border">
+                <thead>
+                  <tr>
+                    {token.header.map((header, headerIndex) => (
+                      <th key={`th-${index}-${headerIndex}`} className="border border-border px-3 py-2 text-left">
+                        {renderInline(header.tokens)}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {token.rows.map((row, rowIndex) => (
+                    <tr key={`row-${index}-${rowIndex}`}>
+                      {row.map((cell, cellIndex) => (
+                        <td key={`td-${index}-${rowIndex}-${cellIndex}`} className="border border-border px-3 py-2">
+                          {renderInline(cell.tokens)}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          );
+        }
+        default:
+          return null;
+      }
+    });
+  };
+
+  return <div className="markdown-preview space-y-3">{renderBlocks(tokens)}</div>;
 }
