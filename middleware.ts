@@ -26,6 +26,24 @@ function getCallbackUrl(request: NextRequest): string {
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // After OAuth, auth-service redirects here with ?token=...; set session cookie and redirect to clean URL.
+  const token = request.nextUrl.searchParams.get("token");
+  if (token) {
+    const target = new URL(request.url);
+    target.searchParams.delete("token");
+    const res = NextResponse.redirect(target);
+    const isSecure = request.url.startsWith("https");
+    res.cookies.set("session", token, {
+      httpOnly: true,
+      secure: isSecure,
+      sameSite: "lax",
+      maxAge: 7 * 24 * 3600,
+      path: "/",
+    });
+    return res;
+  }
+
   const isPublicPath = publicPaths.some((path) => pathname.startsWith(path));
 
   const sessionToken =
