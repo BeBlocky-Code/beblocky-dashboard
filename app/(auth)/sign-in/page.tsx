@@ -3,7 +3,11 @@
 import { Suspense, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 
-const AUTH_APP_URL = process.env.NEXT_PUBLIC_AUTH_APP_URL ?? "http://localhost:3000";
+const AUTH_APP_URL =
+  process.env.NEXT_PUBLIC_AUTH_APP_URL ??
+  (process.env.NODE_ENV === "production"
+    ? "https://auth.beblocky.com"
+    : "http://localhost:3000");
 
 function SignInRedirect() {
   const searchParams = useSearchParams();
