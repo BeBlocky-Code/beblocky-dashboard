@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -22,155 +22,133 @@ import { ClassStatsCard } from "@/components/class/class-stats-card";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import type { IClass, ICreateClassDto, IClassStats } from "@/types/class";
-import type { IUser } from "@/types/user";
-import type { ITeacher } from "@/types/teacher";
-import { classApi } from "@/lib/api/class";
-import { teacherApi } from "@/lib/api/teacher";
-import { userApi } from "@/lib/api/user";
 import { toast } from "sonner";
-import { Types } from "mongoose";
 import { useSession } from "@/lib/auth-client";
+import {
+  useClasses,
+  useDeleteClass,
+  useUserByEmail,
+  useTeacherByUserId,
+} from "@/lib/hooks/queries";
 
 export default function ModernClassesPage() {
   const session = useSession();
-  const [classes, setClasses] = useState<IClass[]>([]);
-  const [filteredClasses, setFilteredClasses] = useState<IClass[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("all");
-  const [overallStats, setOverallStats] = useState<IClassStats | null>(null);
-  const [teacherData, setTeacherData] = useState<ITeacher | null>(null);
 
-  // Load classes and teacher data on component mount
-  useEffect(() => {
-    if (session.data?.user) {
-      loadTeacherData();
-      loadClasses();
+  const email = session.data?.user?.email;
+
+  // Fetch user data using TanStack Query
+  const { data: userData } = useUserByEmail(email, {
+    enabled: !session.isPending && !!email,
+  });
+
+  // Fetch teacher data (for context, if needed)
+  const { data: teacherData } = useTeacherByUserId(
+    userData?._id,
+    userData ?? null,
+    {
+      enabled: !!userData && userData.role === "teacher",
     }
-  }, [session.data?.user]);
+  );
 
-  const loadTeacherData = async () => {
-    if (!session.data?.user?.email) return;
+  // Fetch classes using TanStack Query
+  const {
+    data: classes = [],
+    isLoading,
+    error: classesError,
+  } = useClasses(userData ?? null, undefined, {
+    enabled: !!userData,
+  });
 
-    try {
-      // Get user data by email
-      const userData = await userApi.getUserByEmail(session.data.user.email);
+  // Delete class mutation
+  const deleteClassMutation = useDeleteClass();
 
-      // If user is a teacher, get teacher data using the new route pattern
-      if (userData.role === "teacher" && userData._id) {
-        const teacher = await teacherApi.getTeacherByUserId(
-          userData._id,
-          userData
-        );
-        setTeacherData(teacher);
-      }
-    } catch (error) {
-      console.error("Failed to load teacher data:", error);
-      // Don't show error toast - this might be expected for new users
-    }
-  };
+  // Show error toast if fetch failed
+  if (classesError) {
+    toast.error("Failed to load classes");
+  }
 
-  // Filter classes when search or filter changes
-  useEffect(() => {
+  // Memoize filtered classes
+  const filteredClasses = useMemo(() => {
     let filtered = classes;
 
     // Apply search filter
     if (searchQuery) {
       filtered = filtered.filter(
-        (cls) =>
+        (cls: IClass) =>
           cls.className.toLowerCase().includes(searchQuery.toLowerCase()) ||
           cls.description?.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 
-    // Apply status filter
-    if (statusFilter !== "all") {
-      filtered = filtered.filter((cls) => {
-        if (statusFilter === "active") return cls.isActive;
-        if (statusFilter === "inactive") return !cls.isActive;
-        return true;
-      });
+    // Apply status filter based on active tab
+    if (activeTab === "active") {
+      filtered = filtered.filter((cls: IClass) => cls.isActive);
+    } else if (activeTab === "draft") {
+      filtered = filtered.filter((cls: IClass) => !cls.isActive);
     }
 
-    setFilteredClasses(filtered);
-  }, [classes, searchQuery, statusFilter]);
+    return filtered;
+  }, [classes, searchQuery, activeTab]);
 
-  const loadClasses = async () => {
-    if (!session.data?.user?.email) return;
+  // Memoize overall stats
+  const overallStats = useMemo<IClassStats | null>(() => {
+    if (classes.length === 0) return null;
 
-    setIsLoading(true);
-    try {
-      // Get user data by email
-      const userData = await userApi.getUserByEmail(session.data.user.email);
-      const classesData = await classApi.getClasses(userData);
-      setClasses(classesData);
+    const totalStudents = classes.reduce(
+      (sum: number, cls: IClass) => sum + (cls.students?.length || 0),
+      0
+    );
+    const totalCourses = classes.reduce(
+      (sum: number, cls: IClass) => sum + (cls.courses?.length || 0),
+      0
+    );
+    const averageProgress =
+      classes.length > 0 ? Math.round(100 / classes.length) : 0;
 
-      // Calculate overall stats from the actual data
-      const totalStudents = classesData.reduce(
-        (sum: number, cls: IClass) => sum + (cls.students?.length || 0),
-        0
-      );
-      const totalCourses = classesData.reduce(
-        (sum: number, cls: IClass) => sum + (cls.courses?.length || 0),
-        0
-      );
-      const activeClasses = classesData.filter(
-        (cls: IClass) => cls.isActive
-      ).length;
-      const averageProgress =
-        classesData.length > 0 ? Math.round(100 / classesData.length) : 0;
+    return {
+      totalStudents,
+      totalCourses,
+      activeStudents: totalStudents,
+      averageProgress,
+    };
+  }, [classes]);
 
-      setOverallStats({
-        totalStudents,
-        totalCourses,
-        activeStudents: totalStudents, // This would need to be calculated from actual student data
-        averageProgress,
-      });
-    } catch (error) {
-      console.error("Failed to load classes:", error);
-      toast.error("Failed to load classes");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // Memoize tab counts
+  const tabCounts = useMemo(() => {
+    return {
+      all: classes.length,
+      active: classes.filter((c: IClass) => c.isActive).length,
+      draft: classes.filter((c: IClass) => !c.isActive).length,
+    };
+  }, [classes]);
 
   const handleCreateClass = async (data: ICreateClassDto) => {
     console.log("Parent: Handling class creation completion");
-
-    try {
-      // The class has already been created in the dialog component
-      // We just need to refresh the classes list to show the new class
-      await loadClasses();
-
-      console.log("Parent: Classes list refreshed successfully");
-    } catch (error) {
-      console.error("Failed to refresh classes list:", error);
-      // Don't show error toast here as the class was already created successfully
-    }
+    // The mutation in the dialog will automatically invalidate the classes query
+    // No need to manually refetch
   };
 
   const handleViewClass = (classId: string) => {
-    // Navigate to the class detail page
     window.location.href = `/classes/${classId}`;
   };
 
   const handleEditClass = (classId: string) => {
-    // Navigate to edit page or open edit dialog
     toast.info(
       "Edit functionality coming soon! You'll be able to edit class details."
     );
   };
 
   const handleDeleteClass = async (classId: string) => {
-    if (!session.data?.user?.email) {
+    if (!userData) {
       toast.error("User data not available");
       return;
     }
 
-    // Show confirmation dialog
     if (
       !confirm(
         "Are you sure you want to delete this class? This action cannot be undone."
@@ -180,10 +158,7 @@ export default function ModernClassesPage() {
     }
 
     try {
-      // Get user data by email
-      const userData = await userApi.getUserByEmail(session.data.user.email);
-      await classApi.deleteClass(classId, userData);
-      setClasses((prev) => prev.filter((cls) => cls._id !== classId));
+      await deleteClassMutation.mutateAsync({ classId, user: userData });
       toast.success("Class deleted successfully!");
     } catch (error) {
       console.error("Failed to delete class:", error);
@@ -192,30 +167,18 @@ export default function ModernClassesPage() {
   };
 
   const handleManageStudents = (classId: string) => {
-    // Navigate to student management page
     toast.info(
       "Student management functionality coming soon! You'll be able to add/remove students."
     );
   };
 
   const handleSettings = (classId: string) => {
-    // Navigate to settings page
     toast.info(
       "Class settings functionality coming soon! You'll be able to configure class settings."
     );
   };
 
-  const getTabCounts = () => {
-    return {
-      all: classes.length,
-      active: classes.filter((c) => c.isActive).length,
-      draft: classes.filter((c) => !c.isActive).length,
-    };
-  };
-
-  const tabCounts = getTabCounts();
-
-  if (isLoading) {
+  if (isLoading || session.isPending) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-800">
         <div className="container mx-auto px-6 py-8 pt-24">
@@ -485,7 +448,7 @@ export default function ModernClassesPage() {
                 layout
               >
                 <AnimatePresence>
-                  {filteredClasses.map((classData, index) => (
+                  {filteredClasses.map((classData: IClass, index: number) => (
                     <motion.div
                       key={classData._id}
                       initial={{ opacity: 0, y: 20 }}

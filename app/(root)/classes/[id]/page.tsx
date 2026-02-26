@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,8 +24,6 @@ import type { IClass } from "@/types/class";
 import type { IUser } from "@/types/user";
 import type { IStudent } from "@/types/student";
 import type { ClientCourse } from "@/lib/api/course";
-import { classApi } from "@/lib/api/class";
-import { userApi } from "@/lib/api/user";
 import { studentApi } from "@/lib/api/student";
 import { fetchCourse } from "@/lib/api/course";
 import { toast } from "sonner";
@@ -34,50 +32,64 @@ import { ModernManageStudentsDialog } from "@/components/class/dialog/manage-stu
 import { ModernEditClassDialog } from "@/components/class/dialog/edit-class-dialog";
 import { ModernClassSettingsDialog } from "@/components/class/dialog/class-setting-dialog";
 import { DeleteClassConfirmationDialog } from "@/components/class/dialog/delete-class-confirmation-dialog";
+import {
+  useClass,
+  useDeleteClass,
+  useUpdateClass,
+  useUpdateClassSettings,
+  useUserByEmail,
+} from "@/lib/hooks/queries";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 
 export default function ClassDetailPage() {
   const params = useParams();
   const router = useRouter();
   const session = useSession();
+  const queryClient = useQueryClient();
   const classId = params.id as string;
 
-  const [classData, setClassData] = useState<IClass | null>(null);
   const [students, setStudents] = useState<IStudent[]>([]);
   const [courses, setCourses] = useState<ClientCourse[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
   const [isManageStudentsOpen, setIsManageStudentsOpen] = useState(false);
   const [isEditClassOpen, setIsEditClassOpen] = useState(false);
   const [isClassSettingsOpen, setIsClassSettingsOpen] = useState(false);
   const [isDeleteConfirmationOpen, setIsDeleteConfirmationOpen] =
     useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
 
+  const email = session.data?.user?.email;
+
+  // Fetch user data using TanStack Query
+  const { data: userData } = useUserByEmail(email, {
+    enabled: !session.isPending && !!email,
+  });
+
+  // Fetch class data using TanStack Query
+  const {
+    data: classData,
+    isLoading,
+    error: classError,
+  } = useClass(classId, userData ?? null, {
+    enabled: !!classId && !!userData,
+  });
+
+  // Mutations
+  const deleteClassMutation = useDeleteClass();
+  const updateClassMutation = useUpdateClass();
+  const updateSettingsMutation = useUpdateClassSettings();
+
+  // Show error toast if fetch failed
+  if (classError) {
+    toast.error("Failed to load class details");
+  }
+
+  // Load students and courses when class data is available
   useEffect(() => {
-    if (classId && session.data?.user) {
-      loadClassData();
+    if (classData && session.data?.user?.email) {
+      loadStudentsAndCourses(classData);
     }
-  }, [classId, session.data?.user]);
-
-  const loadClassData = async () => {
-    if (!session.data?.user?.email) return;
-
-    try {
-      console.log("Loading class data for ID:", classId);
-      const userData = await userApi.getUserByEmail(session.data.user.email);
-      const classDetails = await classApi.getClassById(classId, userData);
-      console.log("Loaded class data:", classDetails);
-      setClassData(classDetails);
-
-      // Load students and courses data
-      await loadStudentsAndCourses(classDetails);
-    } catch (error) {
-      console.error("Failed to load class data:", error);
-      toast.error("Failed to load class details");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  }, [classData, session.data?.user?.email]);
 
   const loadStudentsAndCourses = async (classDetails: IClass) => {
     try {
@@ -94,32 +106,12 @@ export default function ClassDetailPage() {
               } as IUser
             );
 
-            // Fetch user information to get the full name
-            let userName = student.userId || studentId.toString();
-            try {
-              const userInfo = await userApi.getUserByEmail(
-                student.userId || studentId.toString()
-              );
-              userName =
-                userInfo.name ||
-                userInfo.email ||
-                student.userId ||
-                studentId.toString();
-            } catch (userError) {
-              console.error(
-                `Failed to load user info for student ${studentId}:`,
-                userError
-              );
-              // Keep the original userId if user info fetch fails
-            }
-
             return {
               ...student,
-              displayName: userName,
+              displayName: student.userId || studentId.toString(),
             };
           } catch (error) {
             console.error(`Failed to load student ${studentId}:`, error);
-            // Return a fallback student object
             return {
               _id: studentId.toString(),
               userId: studentId.toString(),
@@ -151,7 +143,6 @@ export default function ClassDetailPage() {
             return await fetchCourse(courseId.toString());
           } catch (error) {
             console.error(`Failed to load course ${courseId}:`, error);
-            // Return a fallback course object
             return {
               _id: courseId.toString(),
               courseTitle: `Course ${courseId.toString().slice(-4)}`,
@@ -178,19 +169,16 @@ export default function ClassDetailPage() {
   };
 
   const handleDeleteClass = async () => {
-    if (!session.data?.user?.email || !classData) return;
+    if (!userData || !classData) return;
 
-    setIsDeleting(true);
     try {
-      const userData = await userApi.getUserByEmail(session.data.user.email);
-      await classApi.deleteClass(classId, userData);
+      await deleteClassMutation.mutateAsync({ classId, user: userData });
       toast.success("Class deleted successfully!");
       router.push("/classes");
     } catch (error) {
       console.error("Failed to delete class:", error);
       toast.error("Failed to delete class");
     } finally {
-      setIsDeleting(false);
       setIsDeleteConfirmationOpen(false);
     }
   };
@@ -204,14 +192,11 @@ export default function ClassDetailPage() {
   };
 
   const handleSaveEdit = async (updatedClass: any) => {
-    if (!session.data?.user?.email || !classData) return;
+    if (!userData || !classData) return;
 
     try {
-      const userData = await userApi.getUserByEmail(session.data.user.email);
-
-      // Convert the updated class data to match IUpdateClassDto
       const updateData: any = {
-        className: updatedClass.name || updatedClass.className, // Use className for API
+        className: updatedClass.name || updatedClass.className,
         description: updatedClass.description,
         startDate: updatedClass.startDate
           ? updatedClass.startDate.toISOString()
@@ -222,7 +207,6 @@ export default function ClassDetailPage() {
         settings: updatedClass.settings,
       };
 
-      // Only include arrays if they exist and are different from current data
       if (updatedClass.courses && Array.isArray(updatedClass.courses)) {
         updateData.courses = updatedClass.courses.map((id: any) =>
           id.toString()
@@ -234,22 +218,11 @@ export default function ClassDetailPage() {
         );
       }
 
-      console.log("Sending update data to API:", updateData);
-
-      // Call the API and get the actual updated class data
-      const updatedClassData = await classApi.updateClass(
+      await updateClassMutation.mutateAsync({
         classId,
-        updateData,
-        userData
-      );
-
-      console.log("API returned updated class:", updatedClassData);
-
-      // Update local state with the actual API response
-      setClassData(updatedClassData);
-
-      // Reload the class data to ensure we have the latest from database
-      await loadClassData();
+        data: updateData,
+        user: userData,
+      });
 
       toast.success("Class updated successfully!");
       setIsEditClassOpen(false);
@@ -270,36 +243,18 @@ export default function ClassDetailPage() {
   };
 
   const handleSaveSettings = async (settings: any) => {
-    if (!session.data?.user?.email || !classData) return;
+    if (!userData || !classData) return;
 
     try {
-      const userData = await userApi.getUserByEmail(session.data.user.email);
-
-      // Update class settings using the updateSettings API
-      await classApi.updateSettings(
+      await updateSettingsMutation.mutateAsync({
         classId,
-        {
+        settings: {
           allowStudentEnrollment: settings.allowStudentEnrollment,
           requireApproval: settings.requireApproval,
           autoProgress: settings.autoProgress,
         },
-        userData
-      );
-
-      // Update local state
-      setClassData((prev) =>
-        prev
-          ? {
-              ...prev,
-              settings: {
-                ...prev.settings,
-                allowStudentEnrollment: settings.allowStudentEnrollment,
-                requireApproval: settings.requireApproval,
-                autoProgress: settings.autoProgress,
-              },
-            }
-          : null
-      );
+        user: userData,
+      });
 
       toast.success("Class settings updated successfully!");
       setIsClassSettingsOpen(false);
@@ -309,7 +264,7 @@ export default function ClassDetailPage() {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || session.isPending) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-800">
         <div className="container mx-auto px-6 py-8 pt-24">
@@ -841,7 +796,7 @@ export default function ClassDetailPage() {
         onOpenChange={setIsDeleteConfirmationOpen}
         className={displayName}
         onConfirm={handleDeleteClass}
-        isLoading={isDeleting}
+        isLoading={deleteClassMutation.isPending}
       />
     </div>
   );

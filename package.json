@@ -18,11 +18,13 @@
     }
   },
   "dependencies": {
-    "@better-auth/cli": "1.2.8",
+    "@tanstack/react-query": "^5.62.0",
+    "@tanstack/react-query-devtools": "^5.62.0",
+    "@tanstack/react-query-persist-client": "^5.62.0",
+    "@tanstack/query-sync-storage-persister": "^5.62.0",
     "@emotion/is-prop-valid": "latest",
     "@floating-ui/dom": "^1.7.4",
     "@hookform/resolvers": "^3.10.0",
-    "@prisma/client": "^6.9.0",
     "@radix-ui/react-accordion": "1.2.2",
     "@radix-ui/react-alert-dialog": "1.1.4",
     "@radix-ui/react-aspect-ratio": "1.1.1",
@@ -65,7 +67,6 @@
     "@tiptap/suggestion": "^3.10.1",
     "@types/react-syntax-highlighter": "^15.5.13",
     "autoprefixer": "^10.4.20",
-    "better-auth": "^1.2.8",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "1.0.4",
@@ -105,7 +106,6 @@
     "eslint": "^9",
     "eslint-config-next": "15.3.4",
     "postcss": "^8",
-    "prisma": "^6.9.0",
     "tailwindcss": "^3.4.17",
     "typescript": "^5"
   }
