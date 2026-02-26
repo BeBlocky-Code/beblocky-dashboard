@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,75 +30,66 @@ import { CourseStatus, CourseSubscriptionType } from "@/types/course";
 import { DeleteCourseConfirmationDialog } from "./dialogs/delete-course-confirmation-dialog";
 
 import { useRouter } from "next/navigation";
-import {
-  fetchAllCoursesWithDetails,
-  deleteCourse,
-  ClientCourse,
-} from "@/lib/api/course";
+import { useCoursesWithDetails, useDeleteCourse } from "@/lib/hooks/queries";
+import type { ClientCourse } from "@/lib/api/course";
 
 export function ModernCourseGrid() {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("all");
-  const [courses, setCourses] = useState<ClientCourse[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [courseToDelete, setCourseToDelete] = useState<ClientCourse | null>(
     null
   );
-  const [isDeleting, setIsDeleting] = useState(false);
   const router = useRouter();
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setIsLoading(true);
-        const coursesWithDetails = await fetchAllCoursesWithDetails();
-        setCourses(coursesWithDetails);
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : "Failed to fetch courses. Please try again."
-        );
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  // Use TanStack Query for fetching courses
+  const {
+    data: courses = [],
+    isLoading,
+    error,
+  } = useCoursesWithDetails();
 
-    fetchData();
-  }, []);
+  // Use TanStack Query mutation for deleting courses
+  const deleteCourseMutation = useDeleteCourse();
 
-  const filteredCourses = courses.filter((course) => {
-    const matchesSearch =
-      course.courseTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      course.courseDescription
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      course.language.toLowerCase().includes(searchTerm.toLowerCase());
+  // Show error toast if fetch failed
+  if (error) {
+    toast.error(
+      error instanceof Error
+        ? error.message
+        : "Failed to fetch courses. Please try again."
+    );
+  }
 
-    const matchesTab =
-      activeTab === "all" || course.status.toLowerCase() === activeTab;
+  // Memoize filtered courses for performance
+  const filteredCourses = useMemo(() => {
+    return courses.filter((course: ClientCourse) => {
+      const matchesSearch =
+        course.courseTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        course.courseDescription
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase()) ||
+        course.language.toLowerCase().includes(searchTerm.toLowerCase());
 
-    return matchesSearch && matchesTab;
-  });
+      const matchesTab =
+        activeTab === "all" || course.status.toLowerCase() === activeTab;
 
-  const getTabCounts = () => {
+      return matchesSearch && matchesTab;
+    });
+  }, [courses, searchTerm, activeTab]);
+
+  // Memoize tab counts for performance
+  const tabCounts = useMemo(() => {
     return {
       all: courses.length,
-      active: courses.filter((c) => c.status === CourseStatus.ACTIVE).length,
-      draft: courses.filter((c) => c.status === CourseStatus.DRAFT).length,
+      active: courses.filter((c: ClientCourse) => c.status === CourseStatus.ACTIVE).length,
+      draft: courses.filter((c: ClientCourse) => c.status === CourseStatus.DRAFT).length,
     };
-  };
-
-  const tabCounts = getTabCounts();
+  }, [courses]);
 
   const handleDeleteCourse = async (courseId: string) => {
     try {
-      setIsDeleting(true);
-      await deleteCourse(courseId);
-      // Remove the course from the local state
-      setCourses(courses.filter((course) => course._id !== courseId));
+      await deleteCourseMutation.mutateAsync(courseId);
       toast.success("Course deleted successfully!");
       setDeleteDialogOpen(false);
       setCourseToDelete(null);
@@ -109,8 +100,6 @@ export function ModernCourseGrid() {
           ? error.message
           : "Failed to delete course. Please try again."
       );
-    } finally {
-      setIsDeleting(false);
     }
   };
 
@@ -216,7 +205,7 @@ export function ModernCourseGrid() {
                         </Card>
                       </motion.div>
                     ))
-                  : filteredCourses.map((course, index) => (
+                  : filteredCourses.map((course: ClientCourse, index: number) => (
                       <motion.div
                         key={course._id}
                         initial={{ opacity: 0, y: 20 }}
@@ -262,7 +251,7 @@ export function ModernCourseGrid() {
           onOpenChange={closeDeleteDialog}
           courseTitle={courseToDelete.courseTitle}
           onConfirm={() => handleDeleteCourse(courseToDelete._id)}
-          isLoading={isDeleting}
+          isLoading={deleteCourseMutation.isPending}
         />
       )}
     </div>

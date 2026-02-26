@@ -1,11 +1,8 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useSession } from "@/lib/auth-client";
-import { studentApi } from "@/lib/api/student";
-import { userApi } from "@/lib/api/user";
 import type { IStudent } from "@/types/student";
-import type { IUser } from "@/types/user";
 import { Gender } from "@/types/student";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,6 +36,7 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
+import { useAllStudents } from "@/lib/hooks/queries";
 
 interface StudentWithUser extends IStudent {
   displayName?: string;
@@ -48,13 +46,25 @@ interface StudentWithUser extends IStudent {
 
 export default function AdminStudentsPage() {
   const session = useSession();
-  const [students, setStudents] = useState<StudentWithUser[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [genderFilter, setGenderFilter] = useState<string>("all");
   const [ageFilter, setAgeFilter] = useState<string>("all");
   const [minAge, setMinAge] = useState<string>("");
   const [maxAge, setMaxAge] = useState<string>("");
+
+  // Use TanStack Query to fetch all students
+  const {
+    data: rawStudents = [],
+    isLoading,
+    error: studentsError,
+  } = useAllStudents({
+    enabled: !session.isPending && !!session.data?.user,
+  });
+
+  // Show error toast if fetch failed
+  if (studentsError) {
+    toast.error("Failed to load students");
+  }
 
   // Calculate age from date of birth
   const calculateAge = (dateOfBirth?: Date): number | null => {
@@ -72,38 +82,18 @@ export default function AdminStudentsPage() {
     return age;
   };
 
-  // Load all students
-  useEffect(() => {
-    const loadStudents = async () => {
-      setIsLoading(true);
-      try {
-        const studentsData = await studentApi.getAllStudents();
-
-        // Process students data - calculate age and set display info
-        // The API response includes all necessary fields (displayName, email, dateOfBirth, gender, etc.)
-        const processedStudents = studentsData.map((student: any) => {
-          const age = calculateAge(student.dateOfBirth);
-          return {
-            ...student,
-            displayName: student.displayName || student.name || student.userId,
-            email: student.email || student.userId,
-            age: age || undefined,
-          };
-        });
-
-        setStudents(processedStudents);
-      } catch (error) {
-        console.error("Failed to load students:", error);
-        toast.error("Failed to load students");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    if (session.data?.user) {
-      loadStudents();
-    }
-  }, [session.data?.user]);
+  // Process students data to add computed fields
+  const students = useMemo<StudentWithUser[]>(() => {
+    return rawStudents.map((student: any) => {
+      const age = calculateAge(student.dateOfBirth);
+      return {
+        ...student,
+        displayName: student.displayName || student.name || student.userId,
+        email: student.email || student.userId,
+        age: age ?? undefined,
+      };
+    });
+  }, [rawStudents]);
 
   // Filter students
   const filteredStudents = useMemo(() => {
@@ -209,7 +199,7 @@ export default function AdminStudentsPage() {
     });
   };
 
-  if (isLoading) {
+  if (isLoading || session.isPending) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-800">
         <div className="container mx-auto px-6 py-8 pt-24">
