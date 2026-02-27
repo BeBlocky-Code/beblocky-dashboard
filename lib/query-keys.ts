@@ -212,6 +212,21 @@ export const queryKeys = {
   },
 
   // ============================================
+  // HOUR OF CODE
+  // ============================================
+  hourOfCode: {
+    /** Active Hour of Code config */
+    active: () => ["hourOfCode", "active"] as const,
+  },
+
+  /** Bundles (course bundles) */
+  bundles: {
+    all: ["bundles"] as const,
+    list: () => [...queryKeys.bundles.all, "list"] as const,
+    detail: (id: string) => [...queryKeys.bundles.all, "detail", id] as const,
+  },
+
+  // ============================================
   // AI CONVERSATIONS (for future use)
   // ============================================
   ai: {

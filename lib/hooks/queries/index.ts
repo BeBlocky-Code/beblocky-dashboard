@@ -62,3 +62,15 @@ export {
   useCurrentTeacher,
   useCreateTeacher,
 } from "./use-teachers";
+
+// Hour of Code hooks
+export { useHourOfCode, usePatchHourOfCode } from "./use-hour-of-code";
+
+// Bundle hooks
+export {
+  useBundles,
+  useBundle,
+  useCreateBundle,
+  useUpdateBundle,
+  useDeleteBundle,
+} from "./use-bundles";
