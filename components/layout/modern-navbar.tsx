@@ -13,6 +13,7 @@ import {
   Mail,
   CalendarDays,
   Users,
+  Package,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -160,6 +161,16 @@ export function ModernNavbar() {
               >
                 <BookOpen className="h-4 w-4" />
                 Courses
+              </Button>
+            </Link>
+
+            <Link href="/bundles">
+              <Button
+                variant="ghost"
+                className="flex items-center gap-2 text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary hover:bg-primary/5 dark:hover:bg-primary/10 transition-all duration-300"
+              >
+                <Package className="h-4 w-4" />
+                Bundles
               </Button>
             </Link>
 
@@ -439,6 +450,16 @@ export function ModernNavbar() {
               >
                 <BookOpen className="h-4 w-4" />
                 Courses
+              </Button>
+            </Link>
+            <Link href="/bundles">
+              <Button
+                variant="ghost"
+                className="w-full justify-start gap-3 text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary hover:bg-primary/5 dark:hover:bg-primary/10"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                <Package className="h-4 w-4" />
+                Bundles
               </Button>
             </Link>
             <Link href="/classes">
