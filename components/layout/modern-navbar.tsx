@@ -17,7 +17,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { signOut } from "@/lib/auth-client";
 import { useAuth } from "@/hooks/use-auth";
 import {
   DropdownMenu,
@@ -26,7 +25,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useRouter } from "next/navigation";
 import {
   Dialog,
   DialogContent,
@@ -82,7 +80,6 @@ export function ModernNavbar() {
     email: string;
   }>({ name: "", email: "" });
   const [isEditingProfile, setIsEditingProfile] = useState(false);
-  const router = useRouter();
   const { theme, toggleTheme } = useThemeContext();
   const { user, isLoading } = useAuth();
 
@@ -105,10 +102,16 @@ export function ModernNavbar() {
 
   const handleSignOut = async () => {
     try {
-      await signOut();
-      router.push("/sign-in");
+      const res = await fetch("/api/auth/signout", { method: "POST" });
+      const json = (await res.json().catch(() => ({}))) as {
+        redirectUrl?: string;
+      };
+      const redirectUrl = json?.redirectUrl ?? "/sign-in";
+      // Hard navigation ensures httpOnly cookies + in-memory caches are cleared.
+      window.location.href = redirectUrl;
     } catch (error) {
       console.error("Error signing out:", error);
+      window.location.href = "/sign-in";
     }
   };
 
