@@ -9,6 +9,5 @@ export function useAuth() {
     isLoading: session?.isPending || false,
     isAuthenticated: !!session?.data?.user,
     session: session?.data,
-    error: session?.error,
   };
 }

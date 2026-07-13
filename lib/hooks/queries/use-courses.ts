@@ -339,7 +339,7 @@ export function useUpdateSlide() {
       newLessonId?: string;
     }) => updateSlide(slideId, updatedData, imageFiles, prevLessonId, newLessonId),
     onSuccess: (data, variables) => {
-      const courseId = data.courseId?.toString();
+      const courseId = data.course?.toString();
       if (courseId) {
         queryClient.invalidateQueries({ queryKey: queryKeys.slides.byCourse(courseId) });
         queryClient.invalidateQueries({ queryKey: queryKeys.courses.completeData(courseId) });

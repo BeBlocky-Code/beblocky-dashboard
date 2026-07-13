@@ -202,6 +202,9 @@ export const queryKeys = {
   progress: {
     /** Base key for all progress queries */
     all: ["progress"] as const,
+
+    /** All progress records */
+    list: () => [...queryKeys.progress.all, "list"] as const,
     
     /** Progress by student */
     byStudent: (studentId: string) => [...queryKeys.progress.all, "byStudent", studentId] as const,

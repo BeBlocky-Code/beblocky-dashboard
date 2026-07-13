@@ -56,6 +56,9 @@ export {
   useCurrentStudent,
 } from "./use-students";
 
+// Progress hooks
+export { useAllProgress } from "./use-progress";
+
 // Teacher hooks
 export {
   useTeacherByUserId,
