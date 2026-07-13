@@ -1406,23 +1406,23 @@ function renderMarkdownTokens(tokens: TokensList, theme?: string): React.ReactNo
     return blockTokens.map((token, index) => {
       switch (token.type) {
         case "heading": {
-          const Tag = `h${token.depth}` as keyof JSX.IntrinsicElements;
+          const Tag = `h${token.depth}` as "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
           return (
             <Tag key={`heading-${index}`} className="font-semibold mt-4">
-              {renderInline(token.tokens)}
+              {renderInline("tokens" in token ? token.tokens : [])}
             </Tag>
           );
         }
         case "paragraph":
           return (
             <p key={`paragraph-${index}`} className="mt-2">
-              {renderInline(token.tokens)}
+              {renderInline("tokens" in token ? token.tokens : [])}
             </p>
           );
         case "text":
           return (
             <p key={`text-block-${index}`} className="mt-2">
-              {renderInline(token.tokens)}
+              {renderInline("tokens" in token ? token.tokens : [])}
             </p>
           );
         case "list": {
@@ -1432,7 +1432,7 @@ function renderMarkdownTokens(tokens: TokensList, theme?: string): React.ReactNo
               key={`list-${index}`}
               className={`ml-6 mt-2 ${token.ordered ? "list-decimal" : "list-disc"}`}
             >
-              {token.items.map((item, itemIndex) => (
+              {token.items.map((item: Tokens.ListItem, itemIndex: number) => (
                 <li key={`list-item-${index}-${itemIndex}`} className="mb-1">
                   {renderInline(item.tokens)}
                   {item.tokens && item.tokens.length === 0 && item.text}
@@ -1491,7 +1491,7 @@ function renderMarkdownTokens(tokens: TokensList, theme?: string): React.ReactNo
               <table className="w-full text-sm border border-border">
                 <thead>
                   <tr>
-                    {token.header.map((header, headerIndex) => (
+                    {token.header.map((header: Tokens.TableCell, headerIndex: number) => (
                       <th key={`th-${index}-${headerIndex}`} className="border border-border px-3 py-2 text-left">
                         {renderInline(header.tokens)}
                       </th>
@@ -1499,9 +1499,9 @@ function renderMarkdownTokens(tokens: TokensList, theme?: string): React.ReactNo
                   </tr>
                 </thead>
                 <tbody>
-                  {token.rows.map((row, rowIndex) => (
+                  {token.rows.map((row: Tokens.TableCell[], rowIndex: number) => (
                     <tr key={`row-${index}-${rowIndex}`}>
-                      {row.map((cell, cellIndex) => (
+                      {row.map((cell: Tokens.TableCell, cellIndex: number) => (
                         <td key={`td-${index}-${rowIndex}-${cellIndex}`} className="border border-border px-3 py-2">
                           {renderInline(cell.tokens)}
                         </td>

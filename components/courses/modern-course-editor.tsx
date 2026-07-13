@@ -617,20 +617,7 @@ export function ModernCourseEditor({
         <ModernEditCourseDialog
           open={isEditDialogOpen}
           onOpenChange={setIsEditDialogOpen}
-          course={{
-            id: course._id,
-            courseTitle: course.courseTitle,
-            courseDescription: course.courseDescription,
-            courseLanguage: course.courseLanguage,
-            subType: course.subType,
-            status: course.status as "Active" | "Draft",
-            students: course.studentsCount || 0,
-            lessons: course.lessonsCount || 0,
-            slides: course.slidesCount || 0,
-            rating: course.rating,
-            lastUpdated: course.lastUpdated || "Recently",
-            category: course.language || "General",
-          }}
+          course={course}
           onComplete={(updatedCourse) => {
             handleUpdateCourse({
               courseTitle: updatedCourse.courseTitle,

@@ -323,7 +323,6 @@ export function ModernEditClassDialog({
                         date && setFormData({ ...formData, startDate: date })
                       }
                       disabled={(date) => date < new Date()}
-                      initialFocus
                     />
                   </PopoverContent>
                 </Popover>
@@ -358,7 +357,6 @@ export function ModernEditClassDialog({
                         date && setFormData({ ...formData, endDate: date })
                       }
                       disabled={(date) => date <= formData.startDate}
-                      initialFocus
                     />
                   </PopoverContent>
                 </Popover>

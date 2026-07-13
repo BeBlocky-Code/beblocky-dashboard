@@ -36,12 +36,66 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { useAllStudents } from "@/lib/hooks/queries";
+import { useAllStudents, useAllProgress } from "@/lib/hooks/queries";
+import type { ICourseProgress } from "@/lib/api/progress";
 
 interface StudentWithUser extends IStudent {
   displayName?: string;
   email?: string;
   age?: number;
+  averageCompletion?: number | null;
+}
+
+function calculateAge(dateOfBirth?: Date): number | null {
+  if (!dateOfBirth) return null;
+  const today = new Date();
+  const birthDate = new Date(dateOfBirth);
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  if (
+    monthDiff < 0 ||
+    (monthDiff === 0 && today.getDate() < birthDate.getDate())
+  ) {
+    age--;
+  }
+  return age;
+}
+
+function buildStudentCompletionMap(progressRecords: ICourseProgress[]) {
+  const progressByStudent = new Map<string, number[]>();
+
+  for (const record of progressRecords) {
+    if (!record.studentId) continue;
+    const existing = progressByStudent.get(record.studentId) ?? [];
+    existing.push(record.completionPercentage ?? 0);
+    progressByStudent.set(record.studentId, existing);
+  }
+
+  const studentAverage = new Map<string, number>();
+  for (const [studentId, percentages] of progressByStudent) {
+    if (percentages.length === 0) continue;
+    const average =
+      percentages.reduce((sum, value) => sum + value, 0) / percentages.length;
+    studentAverage.set(studentId, Math.round(average * 100) / 100);
+  }
+
+  return studentAverage;
+}
+
+function averageCompletionForStudents(
+  students: StudentWithUser[],
+  studentCompletionMap: Map<string, number>
+): number | null {
+  const averages = students
+    .map((student) =>
+      student._id ? studentCompletionMap.get(String(student._id)) : undefined
+    )
+    .filter((value): value is number => value !== undefined);
+
+  if (averages.length === 0) return null;
+
+  const total = averages.reduce((sum, value) => sum + value, 0);
+  return Math.round((total / averages.length) * 10) / 10;
 }
 
 export default function AdminStudentsPage() {
@@ -61,39 +115,48 @@ export default function AdminStudentsPage() {
     enabled: !session.isPending && !!session.data?.user,
   });
 
+  const {
+    data: progressRecords = [],
+    isLoading: isProgressLoading,
+    error: progressError,
+  } = useAllProgress({
+    enabled: !session.isPending && !!session.data?.user,
+  });
+
   // Show error toast if fetch failed
   if (studentsError) {
     toast.error("Failed to load students");
   }
 
-  // Calculate age from date of birth
-  const calculateAge = (dateOfBirth?: Date): number | null => {
-    if (!dateOfBirth) return null;
-    const today = new Date();
-    const birthDate = new Date(dateOfBirth);
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    if (
-      monthDiff < 0 ||
-      (monthDiff === 0 && today.getDate() < birthDate.getDate())
-    ) {
-      age--;
-    }
-    return age;
-  };
+  if (studentsError) {
+    toast.error("Failed to load students");
+  }
+
+  if (progressError) {
+    toast.error("Failed to load progress data");
+  }
+
+  const studentCompletionMap = useMemo(
+    () => buildStudentCompletionMap(progressRecords),
+    [progressRecords]
+  );
 
   // Process students data to add computed fields
   const students = useMemo<StudentWithUser[]>(() => {
     return rawStudents.map((student: any) => {
       const age = calculateAge(student.dateOfBirth);
+      const studentId = student._id ? String(student._id) : undefined;
       return {
         ...student,
         displayName: student.displayName || student.name || student.userId,
         email: student.email || student.userId,
         age: age ?? undefined,
+        averageCompletion: studentId
+          ? (studentCompletionMap.get(studentId) ?? null)
+          : null,
       };
     });
-  }, [rawStudents]);
+  }, [rawStudents, studentCompletionMap]);
 
   // Filter students
   const filteredStudents = useMemo(() => {
@@ -152,12 +215,35 @@ export default function AdminStudentsPage() {
       (s) => s.gender === Gender.FEMALE
     ).length;
     const otherCount = students.filter((s) => s.gender === Gender.OTHER).length;
+    const studentsOver17 = students.filter(
+      (s) => s.age !== null && s.age !== undefined && s.age > 17
+    );
+    const studentsOver17Count = studentsOver17.length;
 
     const averageAge =
       students
         .map((s) => s.age)
         .filter((age): age is number => age !== null && age !== undefined)
         .reduce((sum, age, _, arr) => sum + age / arr.length, 0) || 0;
+
+    const averageCompletion = averageCompletionForStudents(
+      students,
+      studentCompletionMap
+    );
+    const averageCompletionOver17 = averageCompletionForStudents(
+      studentsOver17,
+      studentCompletionMap
+    );
+    const studentsWithProgress = students.filter(
+      (student) =>
+        student._id &&
+        studentCompletionMap.has(String(student._id))
+    ).length;
+    const studentsOver17WithProgress = studentsOver17.filter(
+      (student) =>
+        student._id &&
+        studentCompletionMap.has(String(student._id))
+    ).length;
 
     const totalCoins = students.reduce((sum, s) => sum + (s.coins || 0), 0);
     const totalTimeSpent = students.reduce(
@@ -177,11 +263,16 @@ export default function AdminStudentsPage() {
       femaleCount,
       otherCount,
       averageAge: Math.round(averageAge * 10) / 10,
+      studentsOver17Count,
+      averageCompletion,
+      averageCompletionOver17,
+      studentsWithProgress,
+      studentsOver17WithProgress,
       totalCoins,
       totalTimeSpent,
       totalEnrolledCourses,
     };
-  }, [students]);
+  }, [students, studentCompletionMap]);
 
   const formatTimeSpent = (minutes: number): string => {
     if (minutes < 60) return `${minutes}m`;
@@ -265,6 +356,9 @@ export default function AdminStudentsPage() {
                   <p className="text-3xl font-bold text-green-700 dark:text-green-300">
                     {analytics.averageAge || "N/A"}
                   </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Based on {analytics.withAge} students with DOB
+                  </p>
                 </div>
                 <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center">
                   <Calendar className="h-6 w-6 text-white" />
@@ -312,6 +406,93 @@ export default function AdminStudentsPage() {
                 </div>
                 <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center">
                   <Clock className="h-6 w-6 text-white" />
+                </div>
+              </div>
+            </Card>
+          </motion.div>
+        </div>
+
+        {/* Age & completion analytics */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.35 }}
+          >
+            <Card className="p-6 bg-gradient-to-br from-cyan-50 to-cyan-100 dark:from-cyan-950/50 dark:to-cyan-900/50 border-cyan-200 dark:border-cyan-800">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">
+                    Students Over 17
+                  </p>
+                  <p className="text-3xl font-bold text-cyan-700 dark:text-cyan-300">
+                    {analytics.studentsOver17Count}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Age known for {analytics.withAge} students
+                  </p>
+                </div>
+                <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-cyan-500 to-cyan-600 flex items-center justify-center">
+                  <UserCheck className="h-6 w-6 text-white" />
+                </div>
+              </div>
+            </Card>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.4 }}
+          >
+            <Card className="p-6 bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-indigo-950/50 dark:to-indigo-900/50 border-indigo-200 dark:border-indigo-800">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">
+                    Avg Course Completion
+                  </p>
+                  <p className="text-3xl font-bold text-indigo-700 dark:text-indigo-300">
+                    {isProgressLoading
+                      ? "..."
+                      : analytics.averageCompletion != null
+                        ? `${analytics.averageCompletion}%`
+                        : "N/A"}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {analytics.studentsWithProgress} students with progress
+                  </p>
+                </div>
+                <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center">
+                  <TrendingUp className="h-6 w-6 text-white" />
+                </div>
+              </div>
+            </Card>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.45 }}
+          >
+            <Card className="p-6 bg-gradient-to-br from-rose-50 to-rose-100 dark:from-rose-950/50 dark:to-rose-900/50 border-rose-200 dark:border-rose-800">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">
+                    Avg Completion (17+)
+                  </p>
+                  <p className="text-3xl font-bold text-rose-700 dark:text-rose-300">
+                    {isProgressLoading
+                      ? "..."
+                      : analytics.averageCompletionOver17 != null
+                        ? `${analytics.averageCompletionOver17}%`
+                        : "N/A"}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {analytics.studentsOver17WithProgress} students over 17 with
+                    progress
+                  </p>
+                </div>
+                <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-rose-500 to-rose-600 flex items-center justify-center">
+                  <TrendingUp className="h-6 w-6 text-white" />
                 </div>
               </div>
             </Card>
@@ -449,13 +630,14 @@ export default function AdminStudentsPage() {
                     <TableHead>Streak</TableHead>
                     <TableHead>Time Spent</TableHead>
                     <TableHead>Courses</TableHead>
+                    <TableHead>Completion</TableHead>
                     <TableHead>Joined</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredStudents.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={10} className="text-center py-8">
+                      <TableCell colSpan={11} className="text-center py-8">
                         <div className="flex flex-col items-center gap-2">
                           <Users className="h-12 w-12 text-muted-foreground" />
                           <p className="text-muted-foreground">
@@ -525,6 +707,17 @@ export default function AdminStudentsPage() {
                         </TableCell>
                         <TableCell>
                           {student.enrolledCourses?.length || 0}
+                        </TableCell>
+                        <TableCell>
+                          {isProgressLoading ? (
+                            <span className="text-muted-foreground">...</span>
+                          ) : student.averageCompletion != null ? (
+                            <Badge variant="outline">
+                              {student.averageCompletion}%
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground">N/A</span>
+                          )}
                         </TableCell>
                         <TableCell className="text-muted-foreground">
                           {formatDate(student.createdAt)}

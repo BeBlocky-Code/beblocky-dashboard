@@ -686,7 +686,6 @@ export function ModernCreateClassDialog({
                                       selected={field.value}
                                       onSelect={field.onChange}
                                       disabled={(date) => date < new Date()}
-                                      initialFocus
                                       className="rounded-md"
                                     />
                                   </PopoverContent>
@@ -736,7 +735,6 @@ export function ModernCreateClassDialog({
                                       selected={field.value}
                                       onSelect={field.onChange}
                                       disabled={(date) => date < new Date()}
-                                      initialFocus
                                       className="rounded-md"
                                     />
                                   </PopoverContent>
