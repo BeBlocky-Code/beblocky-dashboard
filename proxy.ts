@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { buildAuthRedirectUrl, buildCallbackUrl } from "@/lib/auth-callback";
 
 const AUTH_APP_URL =
   process.env.NEXT_PUBLIC_AUTH_APP_URL ??
@@ -11,20 +12,10 @@ const AUTH_SERVICE_URL =
   (process.env.NODE_ENV === "production"
     ? "https://auth-service.beblocky.com"
     : "http://localhost:8080");
-/** Production app URL for callback after auth (e.g. https://admin.beblocky.com). If set, used instead of request.url. */
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL;
+
 const publicPaths = ["/sign-in", "/sign-up"];
 
-function getCallbackUrl(request: NextRequest): string {
-  if (APP_URL) {
-    const base = APP_URL.replace(/\/$/, "");
-    const path = request.nextUrl.pathname + request.nextUrl.search;
-    return path ? `${base}${path.startsWith("/") ? path : `/${path}`}` : base + "/";
-  }
-  return request.url;
-}
-
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // After OAuth, auth-service redirects here with ?token=...; set session cookie and redirect to clean URL.
@@ -32,6 +23,8 @@ export async function middleware(request: NextRequest) {
   if (token) {
     const target = new URL(request.url);
     target.searchParams.delete("token");
+    target.searchParams.delete("callbackUrl");
+    target.searchParams.delete("origin");
     const res = NextResponse.redirect(target);
     const isSecure = request.url.startsWith("https");
     res.cookies.set("session", token, {
@@ -52,9 +45,10 @@ export async function middleware(request: NextRequest) {
     request.cookies.get("__Host-session")?.value;
 
   if (!sessionToken && !isPublicPath) {
-    const callbackUrl = getCallbackUrl(request);
-    const authUrl = `${AUTH_APP_URL.replace(/\/$/, "")}?callbackUrl=${encodeURIComponent(callbackUrl)}&origin=dashboard`;
-    return NextResponse.redirect(authUrl);
+    const callbackUrl = buildCallbackUrl(request, AUTH_APP_URL);
+    return NextResponse.redirect(
+      buildAuthRedirectUrl(AUTH_APP_URL, callbackUrl, "dashboard")
+    );
   }
 
   if (sessionToken && isPublicPath) {
@@ -69,15 +63,16 @@ export async function middleware(request: NextRequest) {
         headers: { Cookie: cookieHeader },
       });
       if (res.status === 401) {
-        const callbackUrl = getCallbackUrl(request);
-        const authUrl = `${AUTH_APP_URL.replace(/\/$/, "")}?callbackUrl=${encodeURIComponent(callbackUrl)}&origin=dashboard`;
-        return NextResponse.redirect(authUrl);
+        const callbackUrl = buildCallbackUrl(request, AUTH_APP_URL);
+        return NextResponse.redirect(
+          buildAuthRedirectUrl(AUTH_APP_URL, callbackUrl, "dashboard")
+        );
       }
       if (res.status === 200) {
         const data = (await res.json()) as { complete?: boolean };
         if (data.complete === false) {
-          const callbackUrl = getCallbackUrl(request);
-          const onboardingUrl = `${AUTH_APP_URL.replace(/\/$/, "")}/onboarding?callbackUrl=${encodeURIComponent(callbackUrl)}&origin=dashboard`;
+          const callbackUrl = buildCallbackUrl(request, AUTH_APP_URL);
+          const onboardingUrl = `${AUTH_APP_URL.replace(/\/$/, "")}/onboarding?${new URLSearchParams({ callbackUrl, origin: "dashboard" }).toString()}`;
           return NextResponse.redirect(onboardingUrl);
         }
       }
