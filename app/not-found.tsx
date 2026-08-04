@@ -45,7 +45,7 @@ const popularPages = [
 ];
 
 const quickActions = [
-  { label: "Create Course", href: "/courses?create=true", icon: BookOpen },
+  { label: "Create Course", href: "/courses/new", icon: BookOpen },
   { label: "Join Class", href: "/classes?join=true", icon: Users },
   { label: "Browse Library", href: "/library", icon: Compass },
 ];

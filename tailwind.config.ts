@@ -22,12 +22,15 @@ const config: Config = {
   				foreground: 'hsl(var(--popover-foreground))'
   			},
   			primary: {
-  				DEFAULT: 'hsl(var(--primary))',
+  				DEFAULT: '#892FFF',
   				foreground: 'hsl(var(--primary-foreground))'
   			},
   			secondary: {
-  				DEFAULT: 'hsl(var(--secondary))',
+  				DEFAULT: '#FF932C',
   				foreground: 'hsl(var(--secondary-foreground))'
+  			},
+  			saffron: {
+  				DEFAULT: 'hsl(var(--saffron))'
   			},
   			muted: {
   				DEFAULT: 'hsl(var(--muted))',
