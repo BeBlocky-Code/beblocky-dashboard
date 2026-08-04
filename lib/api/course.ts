@@ -721,6 +721,43 @@ export async function updateSlide(
 }
 
 /**
+ * Reorder slides within a lesson (assigns order 1..n).
+ */
+export async function reorderSlides(
+  lessonId: string,
+  slideIds: string[]
+): Promise<ISlide[]> {
+  if (!process.env.NEXT_PUBLIC_API_URL) {
+    throw new Error("API URL is not configured");
+  }
+
+  const response = await fetch(
+    `${process.env.NEXT_PUBLIC_API_URL}/slides/reorder`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ lessonId, slideIds }),
+    }
+  );
+
+  if (!response.ok) {
+    let message = "Failed to reorder slides";
+    try {
+      const err = await response.json();
+      message = err?.message || message;
+    } catch {
+      /* ignore */
+    }
+    throw new Error(
+      Array.isArray(message) ? message.join(", ") : String(message)
+    );
+  }
+
+  return response.json();
+}
+
+/**
  * Delete a slide
  */
 export async function deleteSlide(slideId: string): Promise<void> {

@@ -50,7 +50,8 @@ export type IUpdateSlideDto = Partial<
 >;
 
 export interface IReorderSlidesDto {
-  slideIds: Types.ObjectId[];
+  lessonId: string;
+  slideIds: string[];
 }
 
 export interface IAddMediaDto {

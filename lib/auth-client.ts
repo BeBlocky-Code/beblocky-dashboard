@@ -10,6 +10,7 @@ export type SessionUser = {
   name?: string;
   email?: string;
   image?: string;
+  roles?: string[];
 };
 export type SessionData = { valid: boolean; user?: SessionUser };
 
@@ -61,11 +62,13 @@ export async function getSession(): Promise<{
       name?: string;
       email?: string;
       image_url?: string;
+      roles?: string[];
     }>("/account");
     if (accountRes.data) {
       user.name = accountRes.data.name;
       user.email = accountRes.data.email;
       user.image = accountRes.data.image_url;
+      user.roles = accountRes.data.roles ?? [];
     }
     return { data: { valid: true, user } };
   }

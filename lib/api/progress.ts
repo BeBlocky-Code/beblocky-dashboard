@@ -33,25 +33,19 @@ function normalizeProgressRecord(record: Record<string, unknown>): ICourseProgre
 
 export const progressApi = {
   async getAllProgress(): Promise<ICourseProgress[]> {
-    try {
-      const response = await fetch(getApiUrl("/progress"), {
-        credentials: "include",
-      });
+    const response = await fetch(getApiUrl("/progress"), {
+      credentials: "include",
+    });
 
-      if (!response.ok) {
-        console.warn("Progress API not available, returning empty array");
-        return [];
-      }
-
-      const data = await response.json();
-      if (!Array.isArray(data)) return [];
-
-      return data.map((record) =>
-        normalizeProgressRecord(record as Record<string, unknown>)
-      );
-    } catch (error) {
-      console.warn("Progress API error, returning empty array:", error);
-      return [];
+    if (!response.ok) {
+      throw new Error(`Failed to load progress: ${response.status}`);
     }
+
+    const data = await response.json();
+    if (!Array.isArray(data)) return [];
+
+    return data.map((record) =>
+      normalizeProgressRecord(record as Record<string, unknown>)
+    );
   },
 };

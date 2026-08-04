@@ -98,7 +98,6 @@ export const teacherApi = {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error("API Error:", response.status, errorText);
 
         // Parse error response if it's JSON
         let errorData;
@@ -108,10 +107,12 @@ export const teacherApi = {
           errorData = { message: errorText };
         }
 
-        // If it's a 404, the teacher doesn't exist
+        // 404 is expected when the teacher profile hasn't been provisioned yet
         if (response.status === 404) {
           throw new Error("Teacher not found");
         }
+
+        console.error("API Error:", response.status, errorText);
 
         throw new Error(
           errorData.message || `Failed to get teacher: ${response.status}`
@@ -119,16 +120,11 @@ export const teacherApi = {
       }
 
       const result = await response.json();
-      console.log("Teacher retrieved successfully:", result);
-      console.log("Teacher response structure:", {
-        hasOrganizationId: "organizationId" in result,
-        organizationId: result.organizationId,
-        organizationIdType: typeof result.organizationId,
-        allKeys: Object.keys(result),
-      });
       return result;
     } catch (error) {
-      console.error("Teacher API error:", error);
+      if (!(error instanceof Error && error.message === "Teacher not found")) {
+        console.error("Teacher API error:", error);
+      }
       throw error; // Re-throw the error instead of returning mock data
     }
   },
