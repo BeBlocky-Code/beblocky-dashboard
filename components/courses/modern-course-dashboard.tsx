@@ -1,76 +1,40 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { ModernCourseGrid } from "./modern-course-grid";
 import { ModernCourseStats } from "./modern-course-stats";
-import { ModernCourseCreationFlow } from "./modern-course-creation-flow";
 import { Button } from "@/components/ui/button";
-import { Plus, Sparkles } from "lucide-react";
+import { Plus } from "lucide-react";
 
 export default function ModernCourseDashboard() {
-  const [theme, setTheme] = useState("light");
-  const [isCreateFlowOpen, setIsCreateFlowOpen] = useState(false);
+  const router = useRouter();
 
-  useEffect(() => {
-    const root = window.document.documentElement;
-    root.classList.remove("light", "dark");
-    root.classList.add(theme);
-  }, [theme]);
-
-  const toggleTheme = () => {
-    setTheme(theme === "light" ? "dark" : "light");
-  };
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-800">
-      <div className="container mx-auto px-6 py-8 pt-3">
-        {/* Hero Section */}
-        <div className="relative mb-12 overflow-hidden rounded-3xl bg-gradient-to-r from-primary/10 via-primary/5 to-secondary/10 p-8 backdrop-blur-sm">
-          <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
-          <div className="relative z-10">
-            <div className="flex items-center justify-between">
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="h-6 w-6 text-primary animate-pulse" />
-                  <span className="text-sm font-medium text-primary">
-                    Welcome back!
-                  </span>
-                </div>
-                <h1 className="text-4xl font-bold bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-slate-300 bg-clip-text text-transparent">
-                  Transform Learning Experiences
-                </h1>
-                <p className="text-lg text-muted-foreground max-w-2xl">
-                  Create, manage, and deliver exceptional courses that inspire
-                  and educate. Your journey to educational excellence starts
-                  here.
-                </p>
-              </div>
-              <Button
-                onClick={() => setIsCreateFlowOpen(true)}
-                size="lg"
-                className="group relative overflow-hidden bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                <Plus className="mr-2 h-5 w-5 transition-transform group-hover:rotate-90 duration-300" />
-                Create Course
-              </Button>
-            </div>
+    <div className="min-h-full bg-muted/10">
+      <div className="container mx-auto px-4 py-6 md:px-6 md:py-8">
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
+              Courses
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Manage and track your educational content
+            </p>
           </div>
+          <Button
+            className="h-10 rounded-full px-5 text-xs font-bold shadow-sm"
+            onClick={() => router.push("/courses/new")}
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            New course
+          </Button>
         </div>
 
-        {/* Stats Section */}
-        <div className="mb-12">
+        <div className="mb-8">
           <ModernCourseStats />
         </div>
 
-        {/* Courses Grid */}
         <ModernCourseGrid />
-
-        {/* Course Creation Flow */}
-        <ModernCourseCreationFlow
-          open={isCreateFlowOpen}
-          onOpenChange={setIsCreateFlowOpen}
-          mode="create"
-        />
       </div>
     </div>
   );

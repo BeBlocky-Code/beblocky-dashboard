@@ -134,13 +134,13 @@ export function ModernCourseCreationFlow({
   const getSubTypeColor = (subType: CourseSubscriptionType) => {
     switch (subType) {
       case CourseSubscriptionType.PRO:
-        return "from-purple-500 to-purple-600";
+        return "from-[#892FFF] to-[#6B1FD9]";
       case CourseSubscriptionType.BUILDER:
-        return "from-blue-500 to-blue-600";
+        return "from-[#892FFF] to-[#FF932C]";
       case CourseSubscriptionType.ORGANIZATION:
-        return "from-yellow-500 to-yellow-600";
+        return "from-[#FF932C] to-[#892FFF]";
       default:
-        return "from-gray-500 to-gray-600";
+        return "from-muted-foreground to-muted-foreground";
     }
   };
 
