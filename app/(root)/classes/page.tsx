@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useQueries } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Plus,
@@ -11,16 +11,13 @@ import {
   LayoutGrid,
   List,
   Users,
-  Sparkles,
   TrendingUp,
-  BookOpen,
   Clock,
 } from "lucide-react";
 import { ClassCard } from "@/components/class/class-card";
 import { ModernCreateClassDialog } from "@/components/class/create-class-dialog";
 import { ClassStatsCard } from "@/components/class/class-stats-card";
 import { motion, AnimatePresence } from "framer-motion";
-import { Card } from "@/components/ui/card";
 import type { IClass, ICreateClassDto, IClassStats } from "@/types/class";
 import { toast } from "sonner";
 import { useSession } from "@/lib/auth-client";
@@ -30,32 +27,37 @@ import {
   useUserByEmail,
   useTeacherByUserId,
 } from "@/lib/hooks/queries";
+import { classApi } from "@/lib/api/class";
+import { queryKeys } from "@/lib/query-keys";
+import { cn } from "@/lib/utils";
+import { useThemeContext } from "@/components/theme-provider";
 
 export default function ModernClassesPage() {
   const session = useSession();
+  const { theme } = useThemeContext();
+  const accentColor = theme === "dark" ? "#892FFF" : "#FF932C";
+
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("all");
 
   const email = session.data?.user?.email;
 
-  // Fetch user data using TanStack Query
   const { data: userData } = useUserByEmail(email, {
     enabled: !session.isPending && !!email,
   });
 
-  // Fetch teacher data (for context, if needed)
-  const { data: teacherData } = useTeacherByUserId(
-    userData?._id,
-    userData ?? null,
-    {
-      enabled: !!userData && userData.role === "teacher",
-    }
-  );
+  const sessionRoles = session.data?.user?.roles;
+  const isTeacher =
+    (sessionRoles && sessionRoles.length > 0
+      ? sessionRoles.includes("teacher")
+      : userData?.role === "teacher") ?? false;
 
-  // Fetch classes using TanStack Query
+  useTeacherByUserId(session.data?.user?.id ?? userData?._id, userData ?? null, {
+    enabled: !!userData && isTeacher,
+  });
+
   const {
     data: classes = [],
     isLoading,
@@ -64,19 +66,15 @@ export default function ModernClassesPage() {
     enabled: !!userData,
   });
 
-  // Delete class mutation
   const deleteClassMutation = useDeleteClass();
 
-  // Show error toast if fetch failed
   if (classesError) {
     toast.error("Failed to load classes");
   }
 
-  // Memoize filtered classes
   const filteredClasses = useMemo(() => {
     let filtered = classes;
 
-    // Apply search filter
     if (searchQuery) {
       filtered = filtered.filter(
         (cls: IClass) =>
@@ -85,7 +83,6 @@ export default function ModernClassesPage() {
       );
     }
 
-    // Apply status filter based on active tab
     if (activeTab === "active") {
       filtered = filtered.filter((cls: IClass) => cls.isActive);
     } else if (activeTab === "draft") {
@@ -95,7 +92,15 @@ export default function ModernClassesPage() {
     return filtered;
   }, [classes, searchQuery, activeTab]);
 
-  // Memoize overall stats
+  const classStatsQueries = useQueries({
+    queries: classes.map((cls: IClass) => ({
+      queryKey: queryKeys.classes.stats(cls._id || ""),
+      queryFn: () => classApi.getClassStats(cls._id!, userData!),
+      enabled: !!userData && !!cls._id,
+      staleTime: 60_000,
+    })),
+  });
+
   const overallStats = useMemo<IClassStats | null>(() => {
     if (classes.length === 0) return null;
 
@@ -107,18 +112,32 @@ export default function ModernClassesPage() {
       (sum: number, cls: IClass) => sum + (cls.courses?.length || 0),
       0
     );
+
+    const statsResults = classStatsQueries
+      .map((q) => q.data)
+      .filter((s): s is IClassStats => !!s);
+
     const averageProgress =
-      classes.length > 0 ? Math.round(100 / classes.length) : 0;
+      statsResults.length > 0
+        ? Math.round(
+            statsResults.reduce((sum, s) => sum + (s.averageProgress || 0), 0) /
+              statsResults.length
+          )
+        : 0;
+
+    const activeStudents =
+      statsResults.length > 0
+        ? statsResults.reduce((sum, s) => sum + (s.activeStudents || 0), 0)
+        : 0;
 
     return {
       totalStudents,
       totalCourses,
-      activeStudents: totalStudents,
+      activeStudents,
       averageProgress,
     };
-  }, [classes]);
+  }, [classes, classStatsQueries]);
 
-  // Memoize tab counts
   const tabCounts = useMemo(() => {
     return {
       all: classes.length,
@@ -127,17 +146,26 @@ export default function ModernClassesPage() {
     };
   }, [classes]);
 
-  const handleCreateClass = async (data: ICreateClassDto) => {
-    console.log("Parent: Handling class creation completion");
-    // The mutation in the dialog will automatically invalidate the classes query
-    // No need to manually refetch
+  const tabs = [
+    { value: "all", label: "All", icon: Users, count: tabCounts.all },
+    {
+      value: "active",
+      label: "Active",
+      icon: TrendingUp,
+      count: tabCounts.active,
+    },
+    { value: "draft", label: "Draft", icon: Clock, count: tabCounts.draft },
+  ] as const;
+
+  const handleCreateClass = async (_data: ICreateClassDto) => {
+    // Mutation in the dialog invalidates the classes query
   };
 
   const handleViewClass = (classId: string) => {
     window.location.href = `/classes/${classId}`;
   };
 
-  const handleEditClass = (classId: string) => {
+  const handleEditClass = (_classId: string) => {
     toast.info(
       "Edit functionality coming soon! You'll be able to edit class details."
     );
@@ -166,13 +194,13 @@ export default function ModernClassesPage() {
     }
   };
 
-  const handleManageStudents = (classId: string) => {
+  const handleManageStudents = (_classId: string) => {
     toast.info(
       "Student management functionality coming soon! You'll be able to add/remove students."
     );
   };
 
-  const handleSettings = (classId: string) => {
+  const handleSettings = (_classId: string) => {
     toast.info(
       "Class settings functionality coming soon! You'll be able to configure class settings."
     );
@@ -180,270 +208,138 @@ export default function ModernClassesPage() {
 
   if (isLoading || session.isPending) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-800">
-        <div className="container mx-auto px-6 py-8 pt-24">
-          <div className="animate-pulse space-y-6">
-            <div className="h-8 bg-muted rounded w-1/4"></div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="h-32 bg-muted rounded"></div>
-              ))}
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="h-64 bg-muted rounded"></div>
-              ))}
-            </div>
-          </div>
+      <div className="flex min-h-[50vh] items-center justify-center bg-muted/10">
+        <div className="flex items-center gap-3 rounded-2xl border border-border/40 bg-card/40 px-5 py-4 shadow-sm backdrop-blur-sm">
+          <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary/30 border-t-primary" />
+          <span className="text-sm text-muted-foreground">
+            {session.isPending
+              ? "Checking authentication…"
+              : "Loading classes…"}
+          </span>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-800">
-      <div className="container mx-auto px-6 py-8 pt-6">
-        {/* Hero Section */}
-        <div className="relative mb-12 overflow-hidden rounded-3xl bg-gradient-to-r from-primary/10 via-primary/5 to-secondary/10 p-8 backdrop-blur-sm">
-          <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
-          <div className="relative z-10">
-            <div className="flex items-center justify-between">
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="h-6 w-6 text-primary animate-pulse" />
-                  <span className="text-sm font-medium text-primary">
-                    Class Management
-                  </span>
-                </div>
-                <h1 className="text-4xl font-bold bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-slate-300 bg-clip-text text-transparent">
-                  Manage Your Classes
-                </h1>
-                <p className="text-lg text-muted-foreground max-w-2xl">
-                  Create, organize, and track student progress across all your
-                  educational programs.
-                </p>
-              </div>
-              <Button
-                onClick={() => setIsCreateDialogOpen(true)}
-                size="lg"
-                className="group relative overflow-hidden bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                <Plus className="mr-2 h-5 w-5 transition-transform group-hover:rotate-90 duration-300" />
-                Create Class
-              </Button>
-            </div>
+    <div className="min-h-full bg-muted/10">
+      <div className="container mx-auto px-4 py-6 md:px-6 md:py-8">
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
+              Classes
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Create, organize, and track student progress
+            </p>
           </div>
+          <Button
+            className="h-10 rounded-full px-5 text-xs font-bold shadow-sm"
+            onClick={() => setIsCreateDialogOpen(true)}
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            New class
+          </Button>
         </div>
 
-        {/* Quick Stats */}
-        <div className="mb-12">
-          <h2 className="text-2xl font-bold mb-6 bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-slate-300 bg-clip-text text-transparent">
-            Overview
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-            >
-              <Card className="p-6 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/50 dark:to-blue-900/50 border-blue-200 dark:border-blue-800 shadow-lg hover:shadow-xl transition-all duration-300">
-                <div className="flex items-center gap-3">
-                  <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg">
-                    <Users className="h-6 w-6 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">
-                      Total Students
-                    </p>
-                    <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">
-                      {overallStats?.totalStudents || 0}
-                    </p>
-                  </div>
-                </div>
-              </Card>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-            >
-              <Card className="p-6 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/50 dark:to-green-900/50 border-green-200 dark:border-green-800 shadow-lg hover:shadow-xl transition-all duration-300">
-                <div className="flex items-center gap-3">
-                  <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center shadow-lg">
-                    <BookOpen className="h-6 w-6 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">
-                      Active Classes
-                    </p>
-                    <p className="text-2xl font-bold text-green-700 dark:text-green-300">
-                      {tabCounts.active}
-                    </p>
-                  </div>
-                </div>
-              </Card>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-            >
-              <Card className="p-6 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/50 dark:to-purple-900/50 border-purple-200 dark:border-purple-800 shadow-lg hover:shadow-xl transition-all duration-300">
-                <div className="flex items-center gap-3">
-                  <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center shadow-lg">
-                    <TrendingUp className="h-6 w-6 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">
-                      Avg Progress
-                    </p>
-                    <p className="text-2xl font-bold text-purple-700 dark:text-purple-300">
-                      {overallStats?.averageProgress || 0}%
-                    </p>
-                  </div>
-                </div>
-              </Card>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-            >
-              <Card className="p-6 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950/50 dark:to-orange-900/50 border-orange-200 dark:border-orange-800 shadow-lg hover:shadow-xl transition-all duration-300">
-                <div className="flex items-center gap-3">
-                  <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shadow-lg">
-                    <Clock className="h-6 w-6 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">
-                      Learning Hours
-                    </p>
-                    <p className="text-2xl font-bold text-orange-700 dark:text-orange-300">
-                      0h
-                    </p>
-                  </div>
-                </div>
-              </Card>
-            </motion.div>
-          </div>
-        </div>
-
-        {/* Detailed Stats */}
         {overallStats && (
-          <div className="mb-12">
+          <div className="mb-8">
             <ClassStatsCard stats={overallStats} />
           </div>
         )}
 
-        {/* Filters and Search */}
-        <div className="space-y-6 mb-8">
-          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+        <div className="space-y-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-3xl font-bold bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-slate-300 bg-clip-text text-transparent">
-                Your Classes
-              </h2>
-              <p className="text-muted-foreground mt-1">
-                Manage and track your educational programs
+              <h2 className="text-xl font-bold tracking-tight">Your classes</h2>
+              <p className="text-sm text-muted-foreground">
+                Filter by status or search by name
               </p>
             </div>
 
-            <div className="relative flex-1 sm:w-80">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <div className="relative w-full sm:w-80">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 type="text"
-                placeholder="Search classes..."
-                className="pl-10 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-primary/20 transition-all duration-300"
+                placeholder="Search classes…"
+                className="h-10 rounded-full border-border/40 bg-card/40 pl-10 backdrop-blur-sm focus-visible:ring-primary/20"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
           </div>
 
-          {/* Modern Tabs with Counts */}
           <Tabs
             value={activeTab}
             onValueChange={setActiveTab}
             className="w-full"
           >
-            <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:grid-cols-3 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
-              <TabsTrigger
-                value="all"
-                className="flex items-center gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 rounded-lg transition-all duration-300"
-              >
-                <Users className="h-4 w-4" />
-                All Classes
-                <Badge variant="secondary" className="ml-1 text-xs">
-                  {tabCounts.all}
-                </Badge>
-              </TabsTrigger>
-              <TabsTrigger
-                value="active"
-                className="flex items-center gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 rounded-lg transition-all duration-300"
-              >
-                <TrendingUp className="h-4 w-4" />
-                Active
-                <Badge
-                  variant="secondary"
-                  className="ml-1 text-xs bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
-                >
-                  {tabCounts.active}
-                </Badge>
-              </TabsTrigger>
-              <TabsTrigger
-                value="draft"
-                className="flex items-center gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 rounded-lg transition-all duration-300"
-              >
-                <Clock className="h-4 w-4" />
-                Draft
-                <Badge
-                  variant="secondary"
-                  className="ml-1 text-xs bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300"
-                >
-                  {tabCounts.draft}
-                </Badge>
-              </TabsTrigger>
-            </TabsList>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <TabsList className="inline-flex h-auto w-full grid-cols-3 gap-0 rounded-full border border-border/40 bg-muted/50 p-1.5 lg:grid lg:w-auto">
+                {tabs.map(({ value, label, icon: Icon, count }) => {
+                  const active = activeTab === value;
+                  return (
+                    <TabsTrigger
+                      key={value}
+                      value={value}
+                      className={cn(
+                        "flex flex-1 items-center justify-center gap-2 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-tight transition-all duration-300",
+                        "data-[state=active]:shadow-none data-[state=active]:text-white",
+                        !active && "text-muted-foreground hover:text-foreground"
+                      )}
+                      style={{
+                        backgroundColor: active ? accentColor : "transparent",
+                      }}
+                    >
+                      <Icon className="h-3.5 w-3.5" />
+                      <span>{label}</span>
+                      <span
+                        className={cn(
+                          "inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-black",
+                          active
+                            ? "bg-white/20 text-white"
+                            : "border border-border/20 bg-muted/30 text-muted-foreground"
+                        )}
+                      >
+                        {count}
+                      </span>
+                    </TabsTrigger>
+                  );
+                })}
+              </TabsList>
 
-            <TabsContent value={activeTab} className="mt-8">
-              {/* View Mode Toggle */}
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                  <span>{filteredClasses.length} classes found</span>
-                  {searchQuery && (
-                    <Badge variant="secondary">Search: "{searchQuery}"</Badge>
+              <div className="flex items-center gap-1 rounded-full border border-border/40 bg-muted/50 p-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setViewMode("grid")}
+                  className={cn(
+                    "h-8 w-8 rounded-full",
+                    viewMode === "grid" && "bg-card shadow-sm"
                   )}
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant={viewMode === "grid" ? "default" : "outline"}
-                    size="icon"
-                    onClick={() => setViewMode("grid")}
-                    className="transition-all duration-300"
-                  >
-                    <LayoutGrid className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant={viewMode === "list" ? "default" : "outline"}
-                    size="icon"
-                    onClick={() => setViewMode("list")}
-                    className="transition-all duration-300"
-                  >
-                    <List className="h-4 w-4" />
-                  </Button>
-                </div>
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setViewMode("list")}
+                  className={cn(
+                    "h-8 w-8 rounded-full",
+                    viewMode === "list" && "bg-card shadow-sm"
+                  )}
+                >
+                  <List className="h-4 w-4" />
+                </Button>
               </div>
+            </div>
 
-              {/* Classes Grid/List */}
+            <TabsContent value={activeTab} className="mt-6">
               <motion.div
                 className={
                   viewMode === "grid"
-                    ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
-                    : "space-y-4"
+                    ? "grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3"
+                    : "space-y-3"
                 }
                 layout
               >
@@ -451,10 +347,10 @@ export default function ModernClassesPage() {
                   {filteredClasses.map((classData: IClass, index: number) => (
                     <motion.div
                       key={classData._id}
-                      initial={{ opacity: 0, y: 20 }}
+                      initial={{ opacity: 0, y: 12 }}
                       animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -20 }}
-                      transition={{ duration: 0.3, delay: index * 0.1 }}
+                      exit={{ opacity: 0, y: -8 }}
+                      transition={{ duration: 0.25, delay: index * 0.04 }}
                       layout
                     >
                       <ClassCard
@@ -464,24 +360,24 @@ export default function ModernClassesPage() {
                         onDelete={handleDeleteClass}
                         onManageStudents={handleManageStudents}
                         onSettings={handleSettings}
+                        viewMode={viewMode}
                       />
                     </motion.div>
                   ))}
                 </AnimatePresence>
               </motion.div>
 
-              {/* Empty State */}
               {filteredClasses.length === 0 && (
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="text-center py-12"
+                  className="rounded-2xl border border-border/40 bg-card/30 px-6 py-16 text-center backdrop-blur-sm"
                 >
-                  <Users className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-xl font-semibold text-muted-foreground mb-2">
-                    No classes found
-                  </h3>
-                  <p className="text-muted-foreground mb-6">
+                  <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-muted/40">
+                    <Users className="h-7 w-7 text-muted-foreground" />
+                  </div>
+                  <h3 className="text-lg font-semibold">No classes found</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">
                     {searchQuery
                       ? "Try adjusting your search terms"
                       : "Create your first class to get started"}
@@ -489,10 +385,10 @@ export default function ModernClassesPage() {
                   {!searchQuery && (
                     <Button
                       onClick={() => setIsCreateDialogOpen(true)}
-                      className="bg-gradient-to-r from-primary to-primary/80"
+                      className="mt-6 h-10 rounded-full px-5 text-xs font-bold"
                     >
                       <Plus className="mr-2 h-4 w-4" />
-                      Create First Class
+                      Create first class
                     </Button>
                   )}
                 </motion.div>
@@ -501,13 +397,9 @@ export default function ModernClassesPage() {
           </Tabs>
         </div>
 
-        {/* Create Class Dialog */}
         <ModernCreateClassDialog
           open={isCreateDialogOpen}
-          onOpenChange={(open) => {
-            console.log("Parent: Dialog open state changing to:", open);
-            setIsCreateDialogOpen(open);
-          }}
+          onOpenChange={setIsCreateDialogOpen}
           onSubmit={handleCreateClass}
         />
       </div>
