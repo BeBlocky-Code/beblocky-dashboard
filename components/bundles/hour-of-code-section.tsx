@@ -6,11 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Clock, Pencil, BookOpen } from "lucide-react";
 import { useHourOfCode } from "@/lib/hooks/queries";
-import type { HourOfCodeResponse, HourOfCodeCourse } from "@/lib/api/hour-of-code";
+import type { HourOfCodeCourse } from "@/lib/api/hour-of-code";
 import { HourOfCodeCoursePicker } from "./hour-of-code-course-picker";
 import { toast } from "sonner";
 
-function isPopulatedCourse(c: HourOfCodeCourse | string): c is HourOfCodeCourse {
+function isPopulatedCourse(
+  c: HourOfCodeCourse | string
+): c is HourOfCodeCourse {
   return typeof c === "object" && c !== null && "_id" in c;
 }
 
@@ -24,24 +26,24 @@ export function HourOfCodeSection() {
     : [];
 
   if (error) {
-    toast.error(error instanceof Error ? error.message : "Failed to load Hour of Code");
+    toast.error(
+      error instanceof Error ? error.message : "Failed to load Hour of Code"
+    );
   }
 
   return (
     <>
-      <Card className="border border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="p-2 rounded-lg bg-primary/10 dark:bg-primary/20">
+      <Card className="overflow-hidden rounded-2xl border border-border/40 bg-card/40 shadow-sm backdrop-blur-sm">
+        <CardHeader className="border-b border-border/40 bg-muted/20 pb-4 backdrop-blur-sm">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10">
                 <Clock className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <CardTitle className="text-xl">
-                  Hour of Code
-                </CardTitle>
-                <p className="text-sm text-muted-foreground mt-0.5">
-                  Courses shown in the Hour of Code section on the client app.
+                <CardTitle className="text-lg font-bold">Hour of Code</CardTitle>
+                <p className="mt-0.5 text-sm text-muted-foreground">
+                  Courses shown in the Hour of Code section on the client app
                 </p>
               </div>
             </div>
@@ -49,29 +51,31 @@ export function HourOfCodeSection() {
               variant="outline"
               size="sm"
               onClick={() => setPickerOpen(true)}
-              className="gap-2"
+              className="h-9 rounded-full border-border/60 px-4 text-xs font-bold"
             >
-              <Pencil className="h-4 w-4" />
+              <Pencil className="mr-2 h-3.5 w-3.5" />
               Edit courses
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-5">
           {isLoading ? (
-            <div className="flex items-center gap-2 text-muted-foreground py-4">
-              <div className="h-4 w-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-              Loading...
+            <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary/30 border-t-primary" />
+              Loading…
             </div>
           ) : courseList.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-8 rounded-lg border border-dashed border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/30">
-              <BookOpen className="h-10 w-10 text-muted-foreground mb-2" />
+            <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/60 bg-muted/20 px-4 py-10 text-center">
+              <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-muted/40">
+                <BookOpen className="h-6 w-6 text-muted-foreground" />
+              </div>
               <p className="text-sm text-muted-foreground">
-                No courses assigned yet.
+                No courses assigned yet
               </p>
               <Button
                 variant="link"
                 size="sm"
-                className="mt-2"
+                className="mt-1"
                 onClick={() => setPickerOpen(true)}
               >
                 Add courses
@@ -82,8 +86,8 @@ export function HourOfCodeSection() {
               {courseList.map((course) => (
                 <Badge
                   key={course._id}
-                  variant="secondary"
-                  className="py-1.5 px-3 text-sm font-medium"
+                  variant="outline"
+                  className="rounded-full border-border/40 bg-muted/30 px-3 py-1.5 text-xs font-semibold text-muted-foreground"
                 >
                   {course.courseTitle ?? course._id}
                 </Badge>
