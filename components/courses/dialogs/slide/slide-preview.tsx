@@ -129,20 +129,20 @@ export function SlidePreview({ formData }: SlidePreviewProps) {
 
   return (
     <div className="space-y-6">
-      <div className="p-6 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800/50 dark:to-slate-700/50 rounded-2xl border border-slate-200 dark:border-slate-700">
+      <div className="rounded-2xl border border-border/40 bg-muted/20 p-6">
         <h4 className="font-semibold mb-4 flex items-center gap-2">
           <Layers className="h-4 w-4" />
           Slide Preview
         </h4>
 
         <div
-          className="w-full h-48 rounded-lg border p-4 flex flex-col justify-start overflow-hidden"
+          className="flex min-h-[22rem] w-full flex-1 flex-col justify-start overflow-hidden rounded-xl border p-5"
           style={{
             backgroundColor: formData.backgroundColor || "#ffffff",
           }}
         >
           <h5
-            className="font-semibold text-lg mb-2"
+            className="mb-3 text-lg font-semibold"
             style={{
               color: formData.textColor || "#333333",
               fontFamily: formData.titleFont || "Inter",
@@ -154,7 +154,7 @@ export function SlidePreview({ formData }: SlidePreviewProps) {
           {formData.content && (
             <div
               ref={contentRef}
-              className="text-sm opacity-80 prose prose-sm dark:prose-invert overflow-y-auto scrollbar-hide max-h-24"
+              className="min-h-0 flex-1 overflow-y-auto prose prose-sm opacity-80 dark:prose-invert"
             />
           )}
         </div>
@@ -163,7 +163,7 @@ export function SlidePreview({ formData }: SlidePreviewProps) {
           {(formData.startingCode || formData.solutionCode) && (
             <Badge
               variant="outline"
-              className="flex items-center gap-1"
+              className="flex items-center gap-1 rounded-full border-border/40 bg-muted/30"
             >
               <Code className="h-3 w-3" />
               Interactive
@@ -172,7 +172,7 @@ export function SlidePreview({ formData }: SlidePreviewProps) {
           {formData.imageUrls && formData.imageUrls.length > 0 && (
             <Badge
               variant="outline"
-              className="flex items-center gap-1"
+              className="flex items-center gap-1 rounded-full border-border/40 bg-muted/30"
             >
               <ImageIcon className="h-3 w-3" />
               Media
@@ -181,7 +181,7 @@ export function SlidePreview({ formData }: SlidePreviewProps) {
           {formData.themeColors && (
             <Badge
               variant="outline"
-              className="flex items-center gap-1"
+              className="flex items-center gap-1 rounded-full border-border/40 bg-muted/30"
             >
               <Palette className="h-3 w-3" />
               Themed
@@ -190,11 +190,11 @@ export function SlidePreview({ formData }: SlidePreviewProps) {
         </div>
       </div>
 
-      <div className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20 rounded-xl p-6 border border-blue-200 dark:border-blue-800/30">
-        <h4 className="font-semibold text-blue-800 dark:text-blue-200 mb-2">
-          💡 Slide Tips
+      <div className="rounded-2xl border border-border/40 bg-muted/20 p-6">
+        <h4 className="font-semibold mb-2">
+          Slide Tips
         </h4>
-        <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
+        <ul className="text-sm text-muted-foreground space-y-1">
           <li>• Keep titles concise and descriptive</li>
           <li>• Use code slides for interactive learning</li>
           <li>• Add images to enhance visual appeal</li>

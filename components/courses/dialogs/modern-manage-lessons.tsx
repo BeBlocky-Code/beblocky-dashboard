@@ -1,5 +1,7 @@
 "use client";
 
+import type React from "react";
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,7 +28,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { motion, AnimatePresence } from "framer-motion";
 import { ILesson, LessonDifficulty } from "@/types/lesson";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
 
 interface ModernManageLessonsProps {
   courseId: string;
@@ -79,13 +81,13 @@ export function ModernManageLessons({
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
       case LessonDifficulty.BEGINNER:
-        return "from-green-500 to-green-600";
+        return "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300";
       case LessonDifficulty.INTERMEDIATE:
-        return "from-yellow-500 to-yellow-600";
+        return "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300";
       case LessonDifficulty.ADVANCED:
-        return "from-red-500 to-red-600";
+        return "border-rose-500/40 bg-rose-500/10 text-rose-700 dark:text-rose-300";
       default:
-        return "from-gray-500 to-gray-600";
+        return "border-border/40 bg-muted/30 text-muted-foreground";
     }
   };
 
@@ -95,7 +97,7 @@ export function ModernManageLessons({
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
           <div className="space-y-2">
-            <h3 className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-slate-300 bg-clip-text text-transparent">
+            <h3 className="text-xl font-bold tracking-tight">
               Course Lessons
             </h3>
             <p className="text-muted-foreground">
@@ -105,11 +107,9 @@ export function ModernManageLessons({
 
           <Button
             onClick={handleCreateNew}
-            size="lg"
-            className="group relative overflow-hidden bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+            className="h-10 rounded-full px-5 text-xs font-bold"
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-            <Plus className="mr-2 h-5 w-5 transition-transform group-hover:rotate-90 duration-300" />
+            <Plus className="mr-2 h-4 w-4" />
             Create Lesson
           </Button>
         </div>
@@ -121,7 +121,7 @@ export function ModernManageLessons({
             <Input
               type="text"
               placeholder="Search lessons..."
-              className="pl-10 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-primary/20 transition-all duration-300"
+              className="pl-10 border-border/40 bg-card/40 focus:ring-2 focus:ring-primary/20"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -139,7 +139,10 @@ export function ModernManageLessons({
                 variant={activeTab === tabOption ? "default" : "outline"}
                 size="sm"
                 onClick={() => setActiveTab(tabOption as typeof activeTab)}
-                className="capitalize transition-all duration-300"
+                className={cn(
+                  "capitalize rounded-full",
+                  activeTab !== tabOption && "border-border/40"
+                )}
               >
                 {tabOption === "all" ? "All" : tabOption}
               </Button>
@@ -149,87 +152,42 @@ export function ModernManageLessons({
 
         {/* Stats Overview */}
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-          <Card className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/50 dark:to-blue-900/50 border-blue-200 dark:border-blue-800">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
-                <BookOpen className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Total Lessons</p>
-                <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">
-                  {lessons.length}
-                </p>
-              </div>
-            </div>
-          </Card>
-
-          <Card className="p-4 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/50 dark:to-green-900/50 border-green-200 dark:border-green-800">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center">
-                <Clock className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Total Duration</p>
-                <p className="text-2xl font-bold text-green-700 dark:text-green-300">
-                  {lessons.reduce((sum, lesson) => sum + lesson.duration, 0)}m
-                </p>
-              </div>
-            </div>
-          </Card>
-
-          <Card className="p-4 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/50 dark:to-green-900/50 border-green-200 dark:border-green-800">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center">
-                <GraduationCap className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Beginner</p>
-                <p className="text-2xl font-bold text-green-700 dark:text-green-300">
-                  {
-                    lessons.filter(
-                      (l) => l.difficulty === LessonDifficulty.BEGINNER
-                    ).length
-                  }
-                </p>
-              </div>
-            </div>
-          </Card>
-
-          <Card className="p-4 bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-950/50 dark:to-yellow-900/50 border-yellow-200 dark:border-yellow-800">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-yellow-500 to-yellow-600 flex items-center justify-center">
-                <GraduationCap className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Intermediate</p>
-                <p className="text-2xl font-bold text-yellow-700 dark:text-yellow-300">
-                  {
-                    lessons.filter(
-                      (l) => l.difficulty === LessonDifficulty.INTERMEDIATE
-                    ).length
-                  }
-                </p>
-              </div>
-            </div>
-          </Card>
-
-          <Card className="p-4 bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/50 dark:to-red-900/50 border-red-200 dark:border-red-800">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center">
-                <GraduationCap className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Advanced</p>
-                <p className="text-2xl font-bold text-red-700 dark:text-red-300">
-                  {
-                    lessons.filter(
-                      (l) => l.difficulty === LessonDifficulty.ADVANCED
-                    ).length
-                  }
-                </p>
-              </div>
-            </div>
-          </Card>
+          <LessonStatCard
+            title="Total Lessons"
+            value={lessons.length.toString()}
+            icon={BookOpen}
+            iconClass="text-primary bg-primary/10"
+          />
+          <LessonStatCard
+            title="Total Duration"
+            value={`${lessons.reduce((sum, lesson) => sum + lesson.duration, 0)}m`}
+            icon={Clock}
+            iconClass="text-secondary bg-secondary/10"
+          />
+          <LessonStatCard
+            title="Beginner"
+            value={lessons
+              .filter((l) => l.difficulty === LessonDifficulty.BEGINNER)
+              .length.toString()}
+            icon={GraduationCap}
+            iconClass="text-emerald-600 bg-emerald-500/10"
+          />
+          <LessonStatCard
+            title="Intermediate"
+            value={lessons
+              .filter((l) => l.difficulty === LessonDifficulty.INTERMEDIATE)
+              .length.toString()}
+            icon={GraduationCap}
+            iconClass="text-amber-600 bg-amber-500/10"
+          />
+          <LessonStatCard
+            title="Advanced"
+            value={lessons
+              .filter((l) => l.difficulty === LessonDifficulty.ADVANCED)
+              .length.toString()}
+            icon={GraduationCap}
+            iconClass="text-rose-600 bg-rose-500/10"
+          />
         </div>
       </div>
 
@@ -278,7 +236,7 @@ export function ModernManageLessons({
           </p>
           <Button
             onClick={handleCreateNew}
-            className="bg-gradient-to-r from-primary to-primary/80"
+            className="h-10 rounded-full px-5 text-xs font-bold"
           >
             <Plus className="mr-2 h-4 w-4" />
             Create First Lesson
@@ -303,7 +261,7 @@ function ModernLessonCard({
   getDifficultyColor,
 }: ModernLessonCardProps) {
   return (
-    <Card className="group p-6 bg-white/80 dark:bg-slate-900/80 border-0 shadow-lg transition-all duration-300 hover:shadow-xl">
+    <Card className="group rounded-2xl border border-border/40 bg-card/40 p-6 shadow-sm backdrop-blur-sm transition-all duration-300 hover:border-border/60 hover:bg-card/70 hover:shadow-md">
       <div className="flex items-start gap-4">
         <div className="flex-1 space-y-2">
           <h4 className="text-lg font-bold line-clamp-1 group-hover:text-primary transition-colors duration-300">
@@ -314,15 +272,20 @@ function ModernLessonCard({
           </p>
           <div className="flex flex-wrap gap-2 pt-2">
             <Badge
-              className={`bg-gradient-to-r ${getDifficultyColor(lesson.difficulty)} text-white border-0`}
+              variant="outline"
+              className={cn("rounded-full", getDifficultyColor(lesson.difficulty))}
             >
               {lesson.difficulty}
             </Badge>
-            <Badge variant="secondary">{lesson.duration} min</Badge>
-            <Badge variant="secondary">{lesson.slides.length} slides</Badge>
+            <Badge variant="outline" className="rounded-full border-border/40 bg-muted/30">
+              {lesson.duration} min
+            </Badge>
+            <Badge variant="outline" className="rounded-full border-border/40 bg-muted/30">
+              {lesson.slides.length} slides
+            </Badge>
             {lesson.tags &&
               lesson.tags.map((tag) => (
-                <Badge key={tag} variant="outline">
+                <Badge key={tag} variant="outline" className="rounded-full border-border/40 bg-muted/30">
                   {tag}
                 </Badge>
               ))}
@@ -337,13 +300,44 @@ function ModernLessonCard({
           </Button>
         </div>
       </div>
-      <div className="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-slate-700 mt-4">
+      <div className="flex items-center justify-between pt-2 border-t border-border/40 mt-4">
         <span className="text-xs text-muted-foreground">
           Updated{" "}
           {lesson.updatedAt
             ? new Date(lesson.updatedAt).toLocaleDateString()
             : "-"}
         </span>
+      </div>
+    </Card>
+  );
+}
+
+interface LessonStatCardProps {
+  title: string;
+  value: string;
+  icon: React.ComponentType<{ className?: string }>;
+  iconClass: string;
+}
+
+function LessonStatCard({
+  title,
+  value,
+  icon: Icon,
+  iconClass,
+}: LessonStatCardProps) {
+  return (
+    <Card className="rounded-2xl border border-border/40 bg-card/40 shadow-sm backdrop-blur-sm transition-colors hover:bg-card/60">
+      <div className="p-5">
+        <div
+          className={cn(
+            "mb-4 flex h-11 w-11 items-center justify-center rounded-2xl",
+            iconClass
+          )}
+        >
+          <Icon className="h-5 w-5" />
+        </div>
+        <p className="text-xs font-medium text-muted-foreground">{title}</p>
+        <p className="mt-1 text-2xl font-bold tracking-tight">{value}</p>
       </div>
     </Card>
   );

@@ -32,8 +32,8 @@ export function SlideCodeTab({
             })
           }
           placeholder="Enter starting code for students"
-          rows={6}
-          className="mt-2 font-mono text-sm"
+          rows={12}
+          className="mt-2 min-h-[14rem] font-mono text-sm border-border/40 bg-card/40 focus:ring-2 focus:ring-primary/20"
         />
       </div>
 
@@ -51,8 +51,8 @@ export function SlideCodeTab({
             })
           }
           placeholder="Enter solution code"
-          rows={6}
-          className="mt-2 font-mono text-sm"
+          rows={12}
+          className="mt-2 min-h-[14rem] font-mono text-sm border-border/40 bg-card/40 focus:ring-2 focus:ring-primary/20"
         />
       </div>
     </div>

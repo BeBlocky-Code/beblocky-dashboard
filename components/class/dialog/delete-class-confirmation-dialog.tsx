@@ -94,14 +94,14 @@ export function DeleteClassConfirmationDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-md bg-background/95 backdrop-blur-sm border-border/50">
+      <DialogContent className="max-w-md rounded-2xl border border-border/40 bg-card/95 backdrop-blur-sm">
         <DialogHeader className="space-y-3">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-gradient-to-r from-red-500/20 to-red-600/20">
-              <AlertTriangle className="h-5 w-5 text-red-500" />
+            <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-destructive/10">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
             </div>
             <div>
-              <DialogTitle className="text-xl font-semibold text-red-600">
+              <DialogTitle className="text-xl font-bold tracking-tight">
                 Delete Class
               </DialogTitle>
               <p className="text-sm text-muted-foreground">
@@ -112,14 +112,14 @@ export function DeleteClassConfirmationDialog({
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="p-4 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg">
+          <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-4">
             <div className="flex items-start gap-3">
-              <AlertTriangle className="h-5 w-5 text-red-500 mt-0.5 flex-shrink-0" />
+              <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-destructive" />
               <div className="space-y-2">
-                <p className="text-sm font-medium text-red-800 dark:text-red-200">
+                <p className="text-sm font-medium text-destructive">
                   Warning: This will permanently delete the class
                 </p>
-                <ul className="text-sm text-red-700 dark:text-red-300 space-y-1">
+                <ul className="space-y-1 text-sm text-muted-foreground">
                   <li>• All student enrollments will be removed</li>
                   <li>• Course assignments will be lost</li>
                   <li>• Class data cannot be recovered</li>
@@ -132,7 +132,7 @@ export function DeleteClassConfirmationDialog({
             <div className="flex items-center justify-between">
               <Label htmlFor="confirmation-text">
                 Type{" "}
-                <span className="font-mono font-bold text-red-600 bg-red-50 dark:bg-red-950/30 px-2 py-1 rounded border border-red-200 dark:border-red-800">
+                <span className="rounded-lg border border-border/40 bg-muted/20 px-2 py-1 font-mono font-bold text-destructive">
                   "{className}"
                 </span>{" "}
                 to confirm
@@ -142,7 +142,7 @@ export function DeleteClassConfirmationDialog({
                 size="sm"
                 onClick={handleCopyClassName}
                 disabled={copied}
-                className="h-8 text-xs"
+                className="h-8 rounded-full border-border/40 text-xs"
               >
                 {copied ? (
                   <>
@@ -164,33 +164,33 @@ export function DeleteClassConfirmationDialog({
               value={confirmationText}
               onChange={(e) => handleConfirmationChange(e.target.value)}
               className={cn(
-                "bg-background/50 backdrop-blur-sm border-border/50",
+                "border-border/40 bg-card/40",
                 isConfirmed &&
-                  "border-green-500 focus:border-green-500 bg-green-50/50 dark:bg-green-950/20",
+                  "border-primary/50 bg-muted/20",
                 !isConfirmed &&
                   confirmationText &&
-                  "border-red-500 focus:border-red-500 bg-red-50/50 dark:bg-red-950/20"
+                  "border-destructive/50 bg-destructive/10"
               )}
               disabled={isLoading}
             />
             {confirmationText && !isConfirmed && (
-              <p className="text-sm text-red-600 flex items-center gap-2">
-                <span>❌ Class name does not match. Please type exactly:</span>
-                <span className="font-mono font-bold bg-red-100 dark:bg-red-900/30 px-2 py-1 rounded border border-red-300 dark:border-red-700">
+              <p className="flex items-center gap-2 text-sm text-destructive">
+                <span>Class name does not match. Please type exactly:</span>
+                <span className="rounded-lg border border-border/40 bg-muted/20 px-2 py-1 font-mono font-bold">
                   "{className}"
                 </span>
               </p>
             )}
             {isConfirmed && (
-              <p className="text-sm text-green-600 flex items-center gap-2">
-                <span>✓ Class name matches. You can now delete the class.</span>
+              <p className="flex items-center gap-2 text-sm text-primary">
+                <span>Class name matches. You can now delete the class.</span>
               </p>
             )}
           </div>
         </div>
 
-        <div className="flex justify-end gap-3 pt-4 border-t border-border/50">
-          <Button variant="outline" onClick={handleClose} disabled={isLoading}>
+        <div className="flex justify-end gap-3 border-t border-border/40 pt-4">
+          <Button variant="outline" className="rounded-full border-border/40" onClick={handleClose} disabled={isLoading}>
             <X className="h-4 w-4 mr-2" />
             Cancel
           </Button>
@@ -198,7 +198,7 @@ export function DeleteClassConfirmationDialog({
             variant="destructive"
             onClick={handleConfirm}
             disabled={!isConfirmed || isLoading}
-            className="bg-red-600 hover:bg-red-700"
+            className="rounded-full"
           >
             {isLoading ? (
               <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />

@@ -26,6 +26,7 @@ import { motion } from "framer-motion";
 import { toast } from "@/hooks/use-toast";
 import { ILesson, LessonDifficulty } from "@/types/lesson";
 import { Types } from "mongoose";
+import { cn } from "@/lib/utils";
 
 interface ModernEditLessonDialogProps {
   open: boolean;
@@ -161,23 +162,21 @@ export function ModernEditLessonDialog({
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
       case LessonDifficulty.BEGINNER:
-        return "from-green-500 to-green-600";
+        return "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300";
       case LessonDifficulty.INTERMEDIATE:
-        return "from-yellow-500 to-yellow-600";
+        return "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300";
       case LessonDifficulty.ADVANCED:
-        return "from-red-500 to-red-600";
+        return "border-rose-500/40 bg-rose-500/10 text-rose-700 dark:text-rose-300";
       default:
-        return "from-gray-500 to-gray-600";
+        return "border-border/40 bg-muted/30 text-muted-foreground";
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto scrollbar-hide border-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5"></div>
-
-        <DialogHeader className="relative z-10 pb-6">
-          <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-slate-300 bg-clip-text text-transparent">
+      <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto scrollbar-hide rounded-2xl border border-border/40 bg-card/95 backdrop-blur-sm shadow-sm">
+        <DialogHeader className="pb-6">
+          <DialogTitle className="text-xl font-bold tracking-tight">
             {mode === "edit" ? "Edit Lesson" : "Create New Lesson"}
           </DialogTitle>
           <p className="text-muted-foreground">
@@ -187,7 +186,7 @@ export function ModernEditLessonDialog({
           </p>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="relative z-10 space-y-8">
+        <form onSubmit={handleSubmit} className="space-y-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Left Column - Form Fields */}
             <div className="space-y-6">
@@ -207,7 +206,7 @@ export function ModernEditLessonDialog({
                       setFormData({ ...formData, title: e.target.value })
                     }
                     placeholder="Enter an engaging lesson title"
-                    className="mt-2 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-primary/20"
+                    className="mt-2 border-border/40 bg-card/40 focus:ring-2 focus:ring-primary/20"
                     required
                   />
                 </div>
@@ -230,7 +229,7 @@ export function ModernEditLessonDialog({
                     }
                     placeholder="Describe what students will learn in this lesson"
                     rows={4}
-                    className="mt-2 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-primary/20"
+                    className="mt-2 border-border/40 bg-card/40 focus:ring-2 focus:ring-primary/20"
                     required
                   />
                 </div>
@@ -256,7 +255,7 @@ export function ModernEditLessonDialog({
                           duration: Number.parseInt(e.target.value) || 30,
                         })
                       }
-                      className="mt-2 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-primary/20"
+                      className="mt-2 border-border/40 bg-card/40 focus:ring-2 focus:ring-primary/20"
                       required
                     />
                   </div>
@@ -278,7 +277,7 @@ export function ModernEditLessonDialog({
                         })
                       }
                     >
-                      <SelectTrigger className="mt-2 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-slate-200 dark:border-slate-700">
+                      <SelectTrigger className="mt-2 border-border/40 bg-card/40">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -305,7 +304,7 @@ export function ModernEditLessonDialog({
                         value={newTag}
                         onChange={(e) => setNewTag(e.target.value)}
                         placeholder="Add a tag"
-                        className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-slate-200 dark:border-slate-700"
+                        className="border-border/40 bg-card/40"
                         onKeyPress={(e) =>
                           e.key === "Enter" && (e.preventDefault(), addTag())
                         }
@@ -315,6 +314,7 @@ export function ModernEditLessonDialog({
                         onClick={addTag}
                         variant="outline"
                         size="sm"
+                        className="rounded-full border-border/40"
                       >
                         Add
                       </Button>
@@ -351,7 +351,7 @@ export function ModernEditLessonDialog({
             {/* Right Column - Preview & Thumbnail */}
             <div className="space-y-6">
               {/* Lesson Preview */}
-              <div className="p-6 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800/50 dark:to-slate-700/50 rounded-2xl border border-slate-200 dark:border-slate-700">
+              <div className="rounded-2xl border border-border/40 bg-muted/20 p-6">
                 <h4 className="font-semibold mb-4 flex items-center gap-2">
                   <BookOpen className="h-4 w-4" />
                   Lesson Preview
@@ -374,7 +374,8 @@ export function ModernEditLessonDialog({
                       <span>{formData.duration}m</span>
                     </div>
                     <Badge
-                      className={`bg-gradient-to-r ${getDifficultyColor(formData.difficulty)} text-white border-0`}
+                      variant="outline"
+                      className={cn("rounded-full", getDifficultyColor(formData.difficulty))}
                     >
                       {formData.difficulty}
                     </Badge>
@@ -386,7 +387,7 @@ export function ModernEditLessonDialog({
                         <Badge
                           key={index}
                           variant="outline"
-                          className="text-xs"
+                          className="rounded-full border-border/40 bg-muted/30 text-xs"
                         >
                           {tag}
                         </Badge>
@@ -399,19 +400,20 @@ export function ModernEditLessonDialog({
           </div>
 
           {/* Action Buttons */}
-          <div className="flex justify-end gap-3 pt-6 border-t border-slate-200 dark:border-slate-700">
+          <div className="flex justify-end gap-3 pt-6 border-t border-border/40">
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={isLoading}
+              className="rounded-full border-border/40"
             >
               Cancel
             </Button>
             <Button
               type="submit"
               disabled={isLoading}
-              className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+              className="h-10 rounded-full px-5 text-xs font-bold"
             >
               {isLoading ? (
                 <>

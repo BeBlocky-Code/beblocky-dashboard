@@ -20,6 +20,8 @@ interface SlideContentTabProps {
   formData: ISlide;
   setFormData: (data: ISlide) => void;
   courseLessons: ILesson[];
+  existingSlides?: ISlide[];
+  suggestOrderOnLessonChange?: boolean;
 }
 
 // Helper function to extract lesson ID from various formats
@@ -77,10 +79,26 @@ const fontOptions = [
   "Courier New",
 ];
 
+function nextOrderForLesson(slides: ISlide[] | undefined, lessonId: string) {
+  if (!slides?.length) return 1;
+  const orders = slides
+    .filter((s) => {
+      const lid =
+        (s as ISlide & { lessonId?: { toString: () => string } | string })
+          .lessonId?.toString?.() ||
+        (typeof s.lesson === "string" ? s.lesson : s.lesson?.toString());
+      return lid === lessonId;
+    })
+    .map((s) => s.order ?? 0);
+  return orders.length ? Math.max(...orders) + 1 : 1;
+}
+
 export function SlideContentTab({
   formData,
   setFormData,
   courseLessons,
+  existingSlides,
+  suggestOrderOnLessonChange = false,
 }: SlideContentTabProps) {
   const [showFallback, setShowFallback] = useState(false);
   // Debug logging to understand the data structure
@@ -142,7 +160,7 @@ export function SlideContentTab({
           value={formData.title}
           onChange={(e) => setFormData({ ...formData, title: e.target.value })}
           placeholder="Enter slide title"
-          className="mt-2"
+          className="mt-2 border-border/40 bg-card/40 focus:ring-2 focus:ring-primary/20"
           required
         />
       </div>
@@ -159,14 +177,17 @@ export function SlideContentTab({
           <Select
             value={getLessonId(formData.lesson)}
             onValueChange={(value) => {
-              console.log("Lesson selection changed to:", value);
-              setFormData({
+              const next: ISlide = {
                 ...formData,
                 lesson: new Types.ObjectId(value),
-              });
+              };
+              if (suggestOrderOnLessonChange) {
+                next.order = nextOrderForLesson(existingSlides, value);
+              }
+              setFormData(next);
             }}
           >
-            <SelectTrigger className="mt-2">
+            <SelectTrigger className="mt-2 border-border/40 bg-card/40">
               <SelectValue
                 placeholder={
                   currentLesson
@@ -193,7 +214,7 @@ export function SlideContentTab({
               <AlertTriangle className="h-4 w-4 text-amber-500" />
               <Badge
                 variant="outline"
-                className="text-amber-700 border-amber-300"
+                className="text-amber-700 border-amber-500/40 bg-amber-500/10 rounded-full"
               >
                 Associated lesson not found in course
               </Badge>
@@ -217,7 +238,7 @@ export function SlideContentTab({
               })
             }
             placeholder="1"
-            className="mt-2"
+            className="mt-2 border-border/40 bg-card/40 focus:ring-2 focus:ring-primary/20"
             required
           />
         </div>
@@ -232,7 +253,7 @@ export function SlideContentTab({
               setFormData({ ...formData, titleFont: value })
             }
           >
-            <SelectTrigger className="mt-2">
+            <SelectTrigger className="mt-2 border-border/40 bg-card/40">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
