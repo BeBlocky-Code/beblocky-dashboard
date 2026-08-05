@@ -15,8 +15,11 @@ export interface IEmergencyContact {
 
 export interface IStudent {
   _id?: string; // MongoDB ObjectId as string
-  userId: string; // String ID from better-auth
-  displayName?: string; // Display name for UI (fetched from user info)
+  userId: string; // String ID from auth-service
+  /** Resolved from auth-service on list endpoints */
+  name?: string;
+  email?: string;
+  displayName?: string; // Display name for UI (fetched from auth profile)
   dateOfBirth?: Date;
   grade?: number;
   gender?: Gender;

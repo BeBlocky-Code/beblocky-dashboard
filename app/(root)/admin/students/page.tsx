@@ -40,9 +40,8 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { useAllStudents, useAllProgress, useAllUsers } from "@/lib/hooks/queries";
+import { useAllStudents, useAllProgress } from "@/lib/hooks/queries";
 import type { ICourseProgress } from "@/lib/api/progress";
-import type { IUser } from "@/types/user";
 import { cn } from "@/lib/utils";
 import {
   IncompleteProfileNotice,
@@ -149,23 +148,9 @@ export default function AdminStudentsPage() {
     isError: isProgressError,
   } = useAllProgress({ enabled });
 
-  const { data: users = [], isError: isUsersError } = useAllUsers({ enabled });
-
   useEffect(() => {
     if (isProgressError) toast.error("Failed to load progress data");
   }, [isProgressError]);
-
-  useEffect(() => {
-    if (isUsersError) toast.error("Failed to load user profiles");
-  }, [isUsersError]);
-
-  const usersById = useMemo(() => {
-    const map = new Map<string, IUser>();
-    for (const user of users) {
-      if (user?._id) map.set(String(user._id), user);
-    }
-    return map;
-  }, [users]);
 
   const studentCompletionMap = useMemo(
     () => buildStudentCompletionMap(progressRecords),
@@ -175,21 +160,27 @@ export default function AdminStudentsPage() {
   const students = useMemo<StudentRow[]>(() => {
     return rawStudents.map((student) => {
       const userId = String(student.userId ?? "");
-      const user = usersById.get(userId);
       const studentId = student._id ? String(student._id) : undefined;
+      // /api/admin/students normalizes name, email, and displayName from auth-service.
+      const name = student.name?.trim() || undefined;
+      const email = student.email?.trim() || undefined;
+      const displayName =
+        student.displayName?.trim() ||
+        name ||
+        email ||
+        `Student ${shortId(userId)}`;
 
       return {
         ...student,
-        displayName:
-          user?.name || student.displayName || `Student ${shortId(userId)}`,
-        email: user?.email,
+        displayName,
+        email,
         age: calculateAge(student.dateOfBirth) ?? undefined,
         averageCompletion: studentId
           ? (studentCompletionMap.get(studentId) ?? null)
           : null,
       };
     });
-  }, [rawStudents, usersById, studentCompletionMap]);
+  }, [rawStudents, studentCompletionMap]);
 
   const filteredStudents = useMemo(() => {
     let filtered = students;
@@ -410,12 +401,7 @@ export default function AdminStudentsPage() {
           <div className="absolute inset-0 bg-grid-pattern opacity-5" />
           <div className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-primary" />
-                <span className="text-sm font-medium text-primary">
-                  Student Management
-                </span>
-              </div>
+              
               <h1 className="text-3xl font-bold tracking-tight">
                 All Students
               </h1>
@@ -657,10 +643,8 @@ export default function AdminStudentsPage() {
                           {student.displayName}
                         </TableCell>
                         <TableCell className="text-muted-foreground">
-                          {student.email ?? (
-                            <span className="font-mono text-xs">
-                              {shortId(student.userId)}
-                            </span>
+                          {student.email || (
+                            <span className="text-muted-foreground/70">—</span>
                           )}
                         </TableCell>
                         <TableCell>

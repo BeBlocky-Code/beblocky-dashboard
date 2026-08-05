@@ -7,14 +7,9 @@ import { studentApi } from "@/lib/api/student";
 import type { IUser } from "@/types/user";
 
 /**
- * Hook to fetch all students (admin only)
- * 
- * @param options - Additional query options
- * 
- * @example
- * ```tsx
- * const { data: students, isLoading } = useAllStudents();
- * ```
+ * Hook to fetch all students (admin only).
+ * Uses /api/admin/students which forwards the session as Bearer and returns
+ * rows with name, email, and displayName resolved from auth-service.
  */
 export function useAllStudents(options?: { enabled?: boolean }) {
   return useQuery({
