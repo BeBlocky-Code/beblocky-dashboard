@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ISlide } from "@/types/slide";
-import { formatRelativeTime } from "@/lib/utils";
+import { cn, formatRelativeTime } from "@/lib/utils";
 
 interface ModernManageSlidesProps {
   courseId: string;
@@ -102,7 +102,7 @@ export function ModernManageSlides({
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
           <div className="space-y-2">
-            <h3 className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-slate-300 bg-clip-text text-transparent">
+            <h3 className="text-xl font-bold tracking-tight">
               Course Slides
             </h3>
             <p className="text-muted-foreground">
@@ -112,11 +112,9 @@ export function ModernManageSlides({
 
           <Button
             onClick={handleCreateNew}
-            size="lg"
-            className="group relative overflow-hidden bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+            className="h-10 rounded-full px-5 text-xs font-bold"
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-            <Plus className="mr-2 h-5 w-5 transition-transform group-hover:rotate-90 duration-300" />
+            <Plus className="mr-2 h-4 w-4" />
             Create Slide
           </Button>
         </div>
@@ -128,7 +126,7 @@ export function ModernManageSlides({
             <Input
               type="text"
               placeholder="Search slides..."
-              className="pl-10 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-primary/20 transition-all duration-300"
+              className="pl-10 border-border/40 bg-card/40 focus:ring-2 focus:ring-primary/20"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -141,7 +139,10 @@ export function ModernManageSlides({
                 variant={filter === filterOption ? "default" : "outline"}
                 size="sm"
                 onClick={() => setFilter(filterOption as typeof filter)}
-                className="capitalize transition-all duration-300"
+                className={cn(
+                  "capitalize rounded-full",
+                  filter !== filterOption && "border-border/40"
+                )}
               >
                 {filterOption.replace("-", " ")}
               </Button>
@@ -151,53 +152,28 @@ export function ModernManageSlides({
 
         {/* Stats Overview */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Card className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/50 dark:to-blue-900/50 border-blue-200 dark:border-blue-800">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
-                <Layers className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Total Slides</p>
-                <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">
-                  {slides.length}
-                </p>
-              </div>
-            </div>
-          </Card>
-
-          <Card className="p-4 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/50 dark:to-green-900/50 border-green-200 dark:border-green-800">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center">
-                <Code className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Code Slides</p>
-                <p className="text-2xl font-bold text-green-700 dark:text-green-300">
-                  {
-                    slides.filter((s) => s.startingCode || s.solutionCode)
-                      .length
-                  }
-                </p>
-              </div>
-            </div>
-          </Card>
-
-          <Card className="p-4 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/50 dark:to-purple-900/50 border-purple-200 dark:border-purple-800">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center">
-                <ImageIcon className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Image Slides</p>
-                <p className="text-2xl font-bold text-purple-700 dark:text-purple-300">
-                  {
-                    slides.filter((s) => s.imageUrls && s.imageUrls.length > 0)
-                      .length
-                  }
-                </p>
-              </div>
-            </div>
-          </Card>
+          <SlideStatCard
+            title="Total Slides"
+            value={slides.length.toString()}
+            icon={Layers}
+            iconClass="text-primary bg-primary/10"
+          />
+          <SlideStatCard
+            title="Code Slides"
+            value={slides
+              .filter((s) => s.startingCode || s.solutionCode)
+              .length.toString()}
+            icon={Code}
+            iconClass="text-secondary bg-secondary/10"
+          />
+          <SlideStatCard
+            title="Image Slides"
+            value={slides
+              .filter((s) => s.imageUrls && s.imageUrls.length > 0)
+              .length.toString()}
+            icon={ImageIcon}
+            iconClass="text-primary bg-muted/40"
+          />
         </div>
       </div>
 
@@ -246,7 +222,7 @@ export function ModernManageSlides({
           </p>
           <Button
             onClick={handleCreateNew}
-            className="bg-gradient-to-r from-primary to-primary/80"
+            className="h-10 rounded-full px-5 text-xs font-bold"
           >
             <Plus className="mr-2 h-4 w-4" />
             Create First Slide
@@ -278,13 +254,13 @@ function ModernSlideCard({
 
   return (
     <Card
-      className="group relative overflow-hidden border-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:scale-105"
+      className="group relative overflow-hidden rounded-2xl border border-border/40 bg-card/40 shadow-sm backdrop-blur-sm transition-all duration-300 hover:border-border/60 hover:bg-card/70 hover:shadow-md"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* Image Preview */}
       {slide.imageUrls && slide.imageUrls.length > 0 && (
-        <div className="relative w-full h-40 bg-slate-100 dark:bg-slate-800 flex items-center justify-center overflow-hidden border-b border-slate-200 dark:border-slate-700">
+        <div className="relative w-full h-40 bg-muted/20 flex items-center justify-center overflow-hidden border-b border-border/40">
           <img
             src={slide.imageUrls[0]}
             alt={slide.title}
@@ -323,8 +299,8 @@ function ModernSlideCard({
           {/* Type Badge */}
           <div className="absolute top-3 left-3">
             <Badge
-              variant="secondary"
-              className="flex items-center gap-1 text-xs"
+              variant="outline"
+              className="flex items-center gap-1 rounded-full border-border/40 bg-muted/30 text-xs"
             >
               {getSlideTypeIcon(slide)}
               {getSlideTypeLabel(slide)}
@@ -369,13 +345,13 @@ function ModernSlideCard({
         {/* Features */}
         <div className="flex items-center gap-2 text-xs">
           {(slide.startingCode || slide.solutionCode) && (
-            <Badge variant="outline" className="flex items-center gap-1">
+            <Badge variant="outline" className="flex items-center gap-1 rounded-full border-border/40 bg-muted/30">
               <Code className="h-3 w-3" />
               Interactive
             </Badge>
           )}
           {slide.imageUrls && slide.imageUrls.length > 0 && (
-            <Badge variant="outline" className="flex items-center gap-1">
+            <Badge variant="outline" className="flex items-center gap-1 rounded-full border-border/40 bg-muted/30">
               <ImageIcon className="h-3 w-3" />
               Media
             </Badge>
@@ -383,9 +359,35 @@ function ModernSlideCard({
         </div>
 
         {/* Footer */}
-        <div className="text-xs text-muted-foreground pt-2 border-t border-slate-200 dark:border-slate-700">
+        <div className="text-xs text-muted-foreground pt-2 border-t border-border/40">
           Updated {formatRelativeTime(slide.updatedAt)}
         </div>
+      </div>
+    </Card>
+  );
+}
+
+interface SlideStatCardProps {
+  title: string;
+  value: string;
+  icon: React.ComponentType<{ className?: string }>;
+  iconClass: string;
+}
+
+function SlideStatCard({ title, value, icon: Icon, iconClass }: SlideStatCardProps) {
+  return (
+    <Card className="rounded-2xl border border-border/40 bg-card/40 shadow-sm backdrop-blur-sm transition-colors hover:bg-card/60">
+      <div className="p-5">
+        <div
+          className={cn(
+            "mb-4 flex h-11 w-11 items-center justify-center rounded-2xl",
+            iconClass
+          )}
+        >
+          <Icon className="h-5 w-5" />
+        </div>
+        <p className="text-xs font-medium text-muted-foreground">{title}</p>
+        <p className="mt-1 text-2xl font-bold tracking-tight">{value}</p>
       </div>
     </Card>
   );

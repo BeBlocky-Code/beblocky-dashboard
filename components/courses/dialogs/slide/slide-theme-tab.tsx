@@ -30,7 +30,7 @@ export function SlideThemeTab({
                   backgroundColor: e.target.value,
                 })
               }
-              className="w-16 h-10 p-1 border rounded"
+              className="w-16 h-10 p-1 border-border/40 bg-card/40 rounded"
             />
             <Input
               value={formData.backgroundColor || "#ffffff"}
@@ -41,7 +41,7 @@ export function SlideThemeTab({
                 })
               }
               placeholder="#ffffff"
-              className="flex-1"
+              className="flex-1 border-border/40 bg-card/40 focus:ring-2 focus:ring-primary/20"
             />
           </div>
         </div>
@@ -58,7 +58,7 @@ export function SlideThemeTab({
                   textColor: e.target.value,
                 })
               }
-              className="w-16 h-10 p-1 border rounded"
+              className="w-16 h-10 p-1 border-border/40 bg-card/40 rounded"
             />
             <Input
               value={formData.textColor || "#333333"}
@@ -69,7 +69,7 @@ export function SlideThemeTab({
                 })
               }
               placeholder="#333333"
-              className="flex-1"
+              className="flex-1 border-border/40 bg-card/40 focus:ring-2 focus:ring-primary/20"
             />
           </div>
         </div>
@@ -85,7 +85,7 @@ export function SlideThemeTab({
             <div className="mt-2 flex gap-2">
               <Input
                 type="color"
-                value={formData.themeColors?.main || "#3b82f6"}
+                value={formData.themeColors?.main || "#892FFF"}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
@@ -93,14 +93,14 @@ export function SlideThemeTab({
                       main: e.target.value,
                       secondary:
                         formData.themeColors?.secondary ||
-                        "#64748b",
+                        "#FF932C",
                     },
                   })
                 }
-                className="w-16 h-10 p-1 border rounded"
+                className="w-16 h-10 p-1 border-border/40 bg-card/40 rounded"
               />
               <Input
-                value={formData.themeColors?.main || "#3b82f6"}
+                value={formData.themeColors?.main || "#892FFF"}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
@@ -108,12 +108,12 @@ export function SlideThemeTab({
                       main: e.target.value,
                       secondary:
                         formData.themeColors?.secondary ||
-                        "#64748b",
+                        "#FF932C",
                     },
                   })
                 }
-                placeholder="#3b82f6"
-                className="flex-1"
+                placeholder="#892FFF"
+                className="flex-1 border-border/40 bg-card/40 focus:ring-2 focus:ring-primary/20"
               />
             </div>
           </div>
@@ -125,31 +125,31 @@ export function SlideThemeTab({
             <div className="mt-2 flex gap-2">
               <Input
                 type="color"
-                value={formData.themeColors?.secondary || "#64748b"}
+                value={formData.themeColors?.secondary || "#FF932C"}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
                     themeColors: {
-                      main: formData.themeColors?.main || "#3b82f6",
+                      main: formData.themeColors?.main || "#892FFF",
                       secondary: e.target.value,
                     },
                   })
                 }
-                className="w-16 h-10 p-1 border rounded"
+                className="w-16 h-10 p-1 border-border/40 bg-card/40 rounded"
               />
               <Input
-                value={formData.themeColors?.secondary || "#64748b"}
+                value={formData.themeColors?.secondary || "#FF932C"}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
                     themeColors: {
-                      main: formData.themeColors?.main || "#3b82f6",
+                      main: formData.themeColors?.main || "#892FFF",
                       secondary: e.target.value,
                     },
                   })
                 }
-                placeholder="#64748b"
-                className="flex-1"
+                placeholder="#FF932C"
+                className="flex-1 border-border/40 bg-card/40 focus:ring-2 focus:ring-primary/20"
               />
             </div>
           </div>

@@ -10,8 +10,15 @@ export type SessionUser = {
   name?: string;
   email?: string;
   image?: string;
+  roles?: string[];
 };
-export type SessionData = { valid: boolean; user?: SessionUser };
+
+export type SessionData = {
+  valid: boolean;
+  user?: SessionUser;
+  /** Session token for Authorization: Bearer when calling beblocky-api */
+  token?: string;
+};
 
 async function authFetch<T>(
   path: string,
@@ -52,24 +59,44 @@ export async function getSession(): Promise<{
     data: sessionData,
     error,
     status,
-  } = await authFetch<{ valid?: boolean; user?: { id: string } }>(
-    "/auth/session",
-  );
+  } = await authFetch<{
+    valid?: boolean;
+    user?: { id: string };
+    token?: string;
+  }>("/auth/session");
   if (status === 200 && sessionData?.valid && sessionData?.user?.id) {
     const user: SessionUser = { id: sessionData.user.id };
     const accountRes = await authFetch<{
       name?: string;
       email?: string;
       image_url?: string;
+      roles?: string[];
     }>("/account");
     if (accountRes.data) {
       user.name = accountRes.data.name;
       user.email = accountRes.data.email;
       user.image = accountRes.data.image_url;
+      user.roles = accountRes.data.roles ?? [];
     }
-    return { data: { valid: true, user } };
+    return { data: { valid: true, user, token: sessionData.token } };
   }
   return { data: { valid: false }, error };
+}
+
+/**
+ * Headers for calling beblocky-api endpoints protected by BearerAuthGuard.
+ * Prefer same-origin Next.js proxies for list endpoints that return PII when
+ * the session cookie is host-only (cross-origin cookies won't be sent).
+ */
+export async function getApiAuthHeaders(): Promise<Record<string, string>> {
+  const { data: session } = await getSession();
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (session?.token) {
+    headers.Authorization = `Bearer ${session.token}`;
+  }
+  return headers;
 }
 
 export async function signOut(): Promise<void> {

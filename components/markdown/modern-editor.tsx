@@ -53,6 +53,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { useTheme } from "next-themes";
+import { cn } from "@/lib/utils";
 
 type MarkdownEditorProps = {
   value: string;
@@ -784,12 +785,12 @@ export default function MarkdownEditor({
 
   return (
     <TooltipProvider>
-      <div className={className}>
+      <div className={cn("flex h-full min-h-[28rem] flex-col", className)}>
         {/* Code Snippet Dialog */}
         <Dialog open={isCodeDialogOpen} onOpenChange={setIsCodeDialogOpen}>
-          <DialogContent className="sm:max-w-[800px] bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-0 shadow-2xl">
+          <DialogContent className="sm:max-w-[800px] rounded-2xl border border-border/40 bg-card/95 backdrop-blur-sm shadow-sm">
             <DialogHeader>
-              <DialogTitle className="text-xl font-semibold bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-slate-300 bg-clip-text text-transparent">
+              <DialogTitle className="text-xl font-bold tracking-tight">
                 Insert Code Snippet
               </DialogTitle>
             </DialogHeader>
@@ -977,10 +978,11 @@ export default function MarkdownEditor({
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
+          className="shrink-0"
           onHoverStart={() => setIsToolbarHovered(true)}
           onHoverEnd={() => setIsToolbarHovered(false)}
         >
-          <Card className="p-4 mb-6 bg-gradient-to-r from-white/80 via-slate-50/80 to-white/80 dark:from-slate-900/80 dark:via-slate-800/80 dark:to-slate-900/80 backdrop-blur-sm border-0 shadow-lg">
+          <Card className="mb-3 rounded-2xl border border-border/40 bg-card/40 p-3 shadow-sm backdrop-blur-sm">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 {/* Formatting Buttons */}
@@ -1120,82 +1122,67 @@ export default function MarkdownEditor({
           </Card>
         </motion.div>
 
-        {/* Editor Content */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.1 }}
-        >
-          <Card className="overflow-hidden bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-0 shadow-xl">
-            <div
-              className={`grid gap-0 ${activeView === "split" ? "grid-cols-2" : "grid-cols-1"}`}
-            >
-              {/* Editor Pane */}
-              <AnimatePresence>
-                {(activeView === "edit" || activeView === "split") && (
-                  <motion.div
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    transition={{ duration: 0.3 }}
-                    className="relative min-h-[320px]"
+        {/* Editor Content — fills remaining vertical space */}
+        <Card className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-border/40 bg-card/40 shadow-sm backdrop-blur-sm">
+          <div
+            className={cn(
+              "grid min-h-0 flex-1",
+              activeView === "split"
+                ? "grid-cols-1 md:grid-cols-2"
+                : "grid-cols-1"
+            )}
+          >
+            {(activeView === "edit" || activeView === "split") && (
+              <div className="relative min-h-[20rem] md:min-h-0">
+                <div className="absolute left-4 top-3 z-10">
+                  <Badge
+                    variant="outline"
+                    className="rounded-full border-border/40 bg-card/80 backdrop-blur-sm"
                   >
-                    <div className="absolute top-4 left-4 z-10">
-                      <Badge
-                        variant="outline"
-                        className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm"
-                      >
-                        <Edit3 className="h-3 w-3 mr-1" />
-                        Editor
-                      </Badge>
-                    </div>
-                    <textarea
-                      ref={textareaRef}
-                      value={localValue}
-                      onChange={(e) => updateValue(e.target.value)}
-                      onDrop={onDrop}
-                      onKeyDown={onKeyDown}
-                      className="w-full h-80 p-6 pt-16 text-sm font-mono bg-transparent border-0 resize-none focus:outline-none focus:ring-0 placeholder:text-muted-foreground/50"
-                      placeholder="Start writing your markdown here... 
+                    <Edit3 className="mr-1 h-3 w-3" />
+                    Editor
+                  </Badge>
+                </div>
+                <textarea
+                  ref={textareaRef}
+                  value={localValue}
+                  onChange={(e) => updateValue(e.target.value)}
+                  onDrop={onDrop}
+                  onKeyDown={onKeyDown}
+                  className="absolute inset-0 h-full w-full resize-none border-0 bg-transparent p-6 pt-14 font-mono text-sm focus:outline-none focus:ring-0 placeholder:text-muted-foreground/50"
+                  placeholder={`Start writing your markdown here...
 
-✨ Use **bold** and *italic* text
-🎨 Add colors with the palette tool
-📷 Insert images with drag & drop
-⌨️ Use Ctrl/Cmd+B for bold, Ctrl/Cmd+I for italic
-💡 Type / for commands"
-                    />
-                  </motion.div>
+Use **bold** and *italic* text
+Insert images with the Image button
+Ctrl/Cmd+B for bold, Ctrl/Cmd+I for italic
+Type / for commands`}
+                />
+              </div>
+            )}
+
+            {(activeView === "preview" || activeView === "split") && (
+              <div
+                className={cn(
+                  "relative min-h-[20rem] md:min-h-0",
+                  activeView === "split" && "md:border-l md:border-border/40"
                 )}
-              </AnimatePresence>
-
-              {/* Preview Pane */}
-              <AnimatePresence>
-                {(activeView === "preview" || activeView === "split") && (
-                  <motion.div
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 20 }}
-                    transition={{ duration: 0.3 }}
-                    className="relative min-h-[320px] md:border-l md:border-border/50"
+              >
+                <div className="absolute right-4 top-3 z-10">
+                  <Badge
+                    variant="outline"
+                    className="rounded-full border-border/40 bg-card/80 backdrop-blur-sm"
                   >
-                    <div className="absolute top-4 right-4 z-10">
-                      <Badge
-                        variant="outline"
-                        className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm"
-                      >
-                        <Eye className="h-3 w-3 mr-1" />
-                        Preview
-                      </Badge>
-                    </div>
-                    <div className="h-80 p-6 pt-16 overflow-auto prose prose-sm dark:prose-invert max-w-none prose-headings:text-slate-900 dark:prose-headings:text-white prose-p:text-slate-700 dark:prose-p:text-slate-300 min-h-[320px] prose-img:max-w-full prose-img:h-auto">
-                      {renderedMarkdown}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </Card>
-        </motion.div>
+                    <Eye className="mr-1 h-3 w-3" />
+                    Preview
+                  </Badge>
+                </div>
+                <div className="absolute inset-0 overflow-auto p-6 pt-14 prose prose-sm max-w-none dark:prose-invert prose-img:h-auto prose-img:max-w-full">
+                  {renderedMarkdown}
+                </div>
+              </div>
+            )}
+          </div>
+        </Card>
 
         {/* Enhanced Image Picker Dialog */}
         <Dialog

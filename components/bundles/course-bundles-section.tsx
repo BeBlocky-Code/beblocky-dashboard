@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,13 +16,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Package, Plus, Pencil, Trash2, Loader2 } from "lucide-react";
 import { useBundles, useDeleteBundle } from "@/lib/hooks/queries";
-import type { BundleResponse, BundleCourse } from "@/lib/api/bundle";
+import type { BundleResponse } from "@/lib/api/bundle";
 import { BundleFormDialog } from "./bundle-form-dialog";
 import { toast } from "sonner";
-
-function isPopulatedCourse(c: BundleCourse | string): c is BundleCourse {
-  return typeof c === "object" && c !== null && "_id" in c;
-}
 
 export function CourseBundlesSection() {
   const { data: bundles = [], isLoading, error } = useBundles();
@@ -31,7 +28,9 @@ export function CourseBundlesSection() {
   const [deleteBundleId, setDeleteBundleId] = useState<string | null>(null);
 
   if (error) {
-    toast.error(error instanceof Error ? error.message : "Failed to load bundles");
+    toast.error(
+      error instanceof Error ? error.message : "Failed to load bundles"
+    );
   }
 
   const handleEdit = (bundle: BundleResponse) => {
@@ -57,46 +56,61 @@ export function CourseBundlesSection() {
 
   return (
     <>
-      <Card className="border border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="p-2 rounded-lg bg-primary/10 dark:bg-primary/20">
-                <Package className="h-5 w-5 text-primary" />
+      <Card className="overflow-hidden rounded-2xl border border-border/40 bg-card/40 shadow-sm backdrop-blur-sm">
+        <CardHeader className="border-b border-border/40 bg-muted/20 pb-4 backdrop-blur-sm">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-secondary/10">
+                <Package className="h-5 w-5 text-secondary" />
               </div>
               <div>
-                <CardTitle className="text-xl">Course bundles</CardTitle>
-                <p className="text-sm text-muted-foreground mt-0.5">
-                  Group courses into bundles for the client app.
+                <CardTitle className="text-lg font-bold">
+                  Course bundles
+                </CardTitle>
+                <p className="mt-0.5 text-sm text-muted-foreground">
+                  Group courses into bundles for the client app
                 </p>
               </div>
             </div>
-            <Button size="sm" onClick={handleCreate} className="gap-2">
-              <Plus className="h-4 w-4" />
+            <Button
+              size="sm"
+              onClick={handleCreate}
+              className="h-9 rounded-full px-4 text-xs font-bold shadow-sm"
+            >
+              <Plus className="mr-2 h-3.5 w-3.5" />
               Create bundle
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-5">
           {isLoading ? (
-            <div className="flex items-center gap-2 text-muted-foreground py-6">
+            <div className="flex items-center gap-2 py-6 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
-              Loading...
+              Loading…
             </div>
           ) : bundles.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-8 rounded-lg border border-dashed border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/30">
-              <Package className="h-10 w-10 text-muted-foreground mb-2" />
-              <p className="text-sm text-muted-foreground">No bundles yet.</p>
-              <Button variant="link" size="sm" className="mt-2" onClick={handleCreate}>
+            <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/60 bg-muted/20 px-4 py-10 text-center">
+              <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-muted/40">
+                <Package className="h-6 w-6 text-muted-foreground" />
+              </div>
+              <p className="text-sm text-muted-foreground">No bundles yet</p>
+              <Button
+                variant="link"
+                size="sm"
+                className="mt-1"
+                onClick={handleCreate}
+              >
                 Create your first bundle
               </Button>
             </div>
           ) : (
-            <ul className="space-y-3">
+            <ul className="space-y-2">
               {bundles.map((bundle) => {
                 const courseIds = bundle.courseIds ?? [];
                 const courseCount = Array.isArray(courseIds)
-                  ? courseIds.filter((c) => typeof c === "object" || typeof c === "string").length
+                  ? courseIds.filter(
+                      (c) => typeof c === "object" || typeof c === "string"
+                    ).length
                   : 0;
                 const projectCount = Array.isArray(bundle.projectIds)
                   ? bundle.projectIds.length
@@ -104,22 +118,30 @@ export function CourseBundlesSection() {
                 return (
                   <li
                     key={bundle._id}
-                    className="flex items-center justify-between rounded-lg border border-slate-200 dark:border-slate-700 p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                    className="flex items-center justify-between gap-3 rounded-2xl border border-border/40 bg-card/50 p-4 transition-colors hover:bg-card/80"
                   >
-                    <div>
-                      <p className="font-medium">{bundle.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {courseCount} course{courseCount !== 1 ? "s" : ""}
-                        {projectCount > 0 && ` · ${projectCount} project(s)`}
+                    <div className="min-w-0">
+                      <p className="truncate font-medium">{bundle.name}</p>
+                      <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                        <span>
+                          {courseCount} course{courseCount !== 1 ? "s" : ""}
+                          {projectCount > 0 && ` · ${projectCount} project(s)`}
+                        </span>
                         {bundle.isPublished && (
-                          <span className="ml-2 text-primary">· Published</span>
+                          <Badge
+                            variant="outline"
+                            className="rounded-full border-emerald-500/30 bg-emerald-500/10 text-[10px] font-black uppercase tracking-wide text-emerald-700 dark:text-emerald-300"
+                          >
+                            Published
+                          </Badge>
                         )}
-                      </p>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex shrink-0 items-center gap-1">
                       <Button
                         variant="ghost"
                         size="icon"
+                        className="h-8 w-8 rounded-full"
                         onClick={() => handleEdit(bundle)}
                         aria-label="Edit bundle"
                       >
@@ -130,7 +152,7 @@ export function CourseBundlesSection() {
                         size="icon"
                         onClick={() => setDeleteBundleId(bundle._id)}
                         aria-label="Delete bundle"
-                        className="text-destructive hover:text-destructive"
+                        className="h-8 w-8 rounded-full text-destructive hover:text-destructive"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -152,19 +174,25 @@ export function CourseBundlesSection() {
         editBundle={editBundle}
       />
 
-      <AlertDialog open={!!deleteBundleId} onOpenChange={() => setDeleteBundleId(null)}>
-        <AlertDialogContent>
+      <AlertDialog
+        open={!!deleteBundleId}
+        onOpenChange={() => setDeleteBundleId(null)}
+      >
+        <AlertDialogContent className="rounded-2xl border-border/40">
           <AlertDialogHeader>
             <AlertDialogTitle>Delete bundle?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. The bundle will be removed from the list.
+              This action cannot be undone. The bundle will be removed from the
+              list.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel className="rounded-full">
+              Cancel
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteConfirm}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Delete
             </AlertDialogAction>

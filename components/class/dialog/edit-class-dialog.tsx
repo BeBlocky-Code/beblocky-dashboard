@@ -175,14 +175,14 @@ export function ModernEditClassDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-background/95 backdrop-blur-sm border-border/50 scrollbar-hide">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-border/40 bg-card/95 backdrop-blur-sm scrollbar-hide">
         <DialogHeader className="space-y-3">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-gradient-to-r from-primary/20 to-secondary/20">
+            <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-primary/10">
               <Settings className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <DialogTitle className="text-xl font-semibold">
+              <DialogTitle className="text-xl font-bold tracking-tight">
                 Edit Class
               </DialogTitle>
               <p className="text-sm text-muted-foreground">
@@ -211,7 +211,7 @@ export function ModernEditClassDialog({
                   }
                   placeholder="Enter class name"
                   className={cn(
-                    "h-12 bg-background/50 backdrop-blur-sm border-border/50",
+                    "h-12 border-border/40 bg-card/40",
                     errors.name && "border-red-500 focus-visible:ring-red-500"
                   )}
                 />
@@ -237,7 +237,7 @@ export function ModernEditClassDialog({
                   }
                   placeholder="Enter class description"
                   rows={3}
-                  className="bg-background/50 backdrop-blur-sm border-border/50 resize-none"
+                  className="resize-none border-border/40 bg-card/40"
                 />
               </div>
 
@@ -249,7 +249,7 @@ export function ModernEditClassDialog({
                     setFormData({ ...formData, status: value })
                   }
                 >
-                  <SelectTrigger className="h-12 bg-background/50 backdrop-blur-sm border-border/50">
+                  <SelectTrigger className="h-12 border-border/40 bg-card/40">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -302,7 +302,7 @@ export function ModernEditClassDialog({
                     <Button
                       variant="outline"
                       className={cn(
-                        "h-12 w-full justify-start text-left font-normal bg-background/50 backdrop-blur-sm border-border/50",
+                        "h-12 w-full justify-start text-left font-normal rounded-full border-border/40 bg-card/40",
                         !formData.startDate && "text-muted-foreground"
                       )}
                     >
@@ -313,7 +313,7 @@ export function ModernEditClassDialog({
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent
-                    className="w-auto p-0 bg-background/95 backdrop-blur-sm border-border/50"
+                    className="w-auto rounded-2xl border border-border/40 bg-card/95 p-0 backdrop-blur-sm"
                     align="start"
                   >
                     <Calendar
@@ -335,7 +335,7 @@ export function ModernEditClassDialog({
                     <Button
                       variant="outline"
                       className={cn(
-                        "h-12 w-full justify-start text-left font-normal bg-background/50 backdrop-blur-sm border-border/50",
+                        "h-12 w-full justify-start text-left font-normal rounded-full border-border/40 bg-card/40",
                         !formData.endDate && "text-muted-foreground",
                         errors.endDate && "border-red-500"
                       )}
@@ -347,7 +347,7 @@ export function ModernEditClassDialog({
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent
-                    className="w-auto p-0 bg-background/95 backdrop-blur-sm border-border/50"
+                    className="w-auto rounded-2xl border border-border/40 bg-card/95 p-0 backdrop-blur-sm"
                     align="start"
                   >
                     <Calendar
@@ -377,10 +377,10 @@ export function ModernEditClassDialog({
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="p-3 rounded-lg bg-gradient-to-r from-primary/10 to-secondary/10 border border-border/50"
+                className="rounded-xl border border-border/40 bg-muted/20 p-3"
               >
                 <div className="flex items-center gap-2 text-sm">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <CheckCircle className="h-4 w-4 text-primary" />
                   <span className="text-muted-foreground">Duration:</span>
                   <span className="font-medium">{calculateDuration()}</span>
                 </div>
@@ -399,7 +399,7 @@ export function ModernEditClassDialog({
 
             <div className="space-y-4">
               <div className="space-y-4">
-                <div className="flex items-center justify-between p-3 rounded-lg bg-background/50 backdrop-blur-sm border border-border/50">
+                <div className="flex items-center justify-between rounded-xl border border-border/40 bg-muted/20 p-3">
                   <div className="space-y-1">
                     <Label className="text-sm font-medium">
                       Allow Student Enrollment
@@ -422,7 +422,7 @@ export function ModernEditClassDialog({
                   />
                 </div>
 
-                <div className="flex items-center justify-between p-3 rounded-lg bg-background/50 backdrop-blur-sm border border-border/50">
+                <div className="flex items-center justify-between rounded-xl border border-border/40 bg-muted/20 p-3">
                   <div className="space-y-1">
                     <Label className="text-sm font-medium">
                       Require Approval
@@ -445,7 +445,7 @@ export function ModernEditClassDialog({
                   />
                 </div>
 
-                <div className="flex items-center justify-between p-3 rounded-lg bg-background/50 backdrop-blur-sm border border-border/50">
+                <div className="flex items-center justify-between rounded-xl border border-border/40 bg-muted/20 p-3">
                   <div className="space-y-1">
                     <Label className="text-sm font-medium">Auto Progress</Label>
                     <p className="text-xs text-muted-foreground">
@@ -471,13 +471,14 @@ export function ModernEditClassDialog({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between pt-4 border-t border-border/50">
+        <div className="flex items-center justify-between border-t border-border/40 pt-4">
           <div className="text-sm text-muted-foreground">
             Last updated: {safeFormatDate(classData.updatedAt, "PPP")}
           </div>
           <div className="flex gap-3">
             <Button
               variant="outline"
+              className="rounded-full border-border/40"
               onClick={() => onOpenChange(false)}
               disabled={isLoading}
             >
@@ -487,7 +488,7 @@ export function ModernEditClassDialog({
             <Button
               onClick={handleSave}
               disabled={isLoading}
-              className="bg-gradient-to-r from-primary to-secondary"
+              className="rounded-full"
             >
               <AnimatePresence mode="wait">
                 {isLoading ? (

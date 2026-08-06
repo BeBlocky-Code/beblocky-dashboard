@@ -53,6 +53,31 @@ export function decryptEmail(encrypted: string): string {
   }
 }
 
+const COURSE_ID_SALT = "beblocky_2024";
+
+const IDE_BASE_URL =
+  (typeof process !== "undefined" && process.env.NEXT_PUBLIC_IDE_URL) ||
+  "https://ide.beblocky.com";
+
+/**
+ * Encrypt courseId for IDE URL (same algorithm as encryptEmail).
+ */
+export function encryptCourseId(courseId: string): string {
+  if (!courseId) return "";
+
+  const salted = courseId + COURSE_ID_SALT;
+  const reversed = salted.split("").reverse().join("");
+  const encoded = btoa(reversed);
+  return encoded.replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
+}
+
+/**
+ * Build IDE learn URL for a course (uses NEXT_PUBLIC_IDE_URL from env).
+ */
+export function getIdeLearnUrl(courseId: string): string {
+  return `${IDE_BASE_URL}/courses/${encryptCourseId(courseId)}/learn`;
+}
+
 /**
  * Format a date as a relative time string (e.g., "2 hours ago", "3 days ago")
  */

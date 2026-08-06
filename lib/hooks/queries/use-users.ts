@@ -7,6 +7,26 @@ import { userApi } from "@/lib/api/user";
 import type { IUser } from "@/types/user";
 
 /**
+ * Hook to fetch every user record
+ *
+ * @param options - Additional query options
+ *
+ * @example
+ * ```tsx
+ * const { data: users = [] } = useAllUsers();
+ * ```
+ */
+export function useAllUsers(options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: queryKeys.users.list(),
+    queryFn: () => userApi.getAllUsers(),
+    staleTime: STALE_TIMES.LISTS,
+    gcTime: GC_TIMES.MEDIUM,
+    enabled: options?.enabled !== false,
+  });
+}
+
+/**
  * Hook to fetch a user by email
  * 
  * @param email - The user's email address
@@ -24,6 +44,12 @@ export function useUserByEmail(email: string | undefined, options?: { enabled?: 
     staleTime: STALE_TIMES.USER,
     gcTime: GC_TIMES.MEDIUM,
     enabled: options?.enabled !== false && !!email,
+    retry: (failureCount, error) => {
+      if (error instanceof Error && error.message === "User not found") {
+        return false;
+      }
+      return failureCount < 2;
+    },
   });
 }
 

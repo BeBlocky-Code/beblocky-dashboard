@@ -63,8 +63,8 @@ export function ModernEditSlideDialog({
     backgroundColor: "#ffffff",
     textColor: "#333333",
     themeColors: {
-      main: "#3b82f6",
-      secondary: "#64748b",
+      main: "#892FFF",
+      secondary: "#FF932C",
     },
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -98,8 +98,8 @@ export function ModernEditSlideDialog({
         backgroundColor: "#ffffff",
         textColor: "#333333",
         themeColors: {
-          main: "#3b82f6",
-          secondary: "#64748b",
+          main: "#892FFF",
+          secondary: "#FF932C",
         },
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -214,11 +214,9 @@ export function ModernEditSlideDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[1000px] max-h-[90vh] overflow-y-auto scrollbar-hide border-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5"></div>
-
-        <DialogHeader className="relative z-10 pb-6">
-          <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-slate-300 bg-clip-text text-transparent">
+      <DialogContent className="sm:max-w-[1000px] max-h-[90vh] overflow-y-auto scrollbar-hide rounded-2xl border border-border/40 bg-card/95 backdrop-blur-sm shadow-sm">
+        <DialogHeader className="pb-6">
+          <DialogTitle className="text-xl font-bold tracking-tight">
             {mode === "edit" ? "Edit Slide" : "Create New Slide"}
           </DialogTitle>
           <p className="text-muted-foreground">
@@ -228,7 +226,7 @@ export function ModernEditSlideDialog({
           </p>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="relative z-10 space-y-8">
+        <form onSubmit={handleSubmit} className="space-y-8">
           <div
             className={`grid gap-8 ${activeTab === "interactive" ? "grid-cols-1" : "grid-cols-1 lg:grid-cols-2"}`}
           >
@@ -305,19 +303,20 @@ export function ModernEditSlideDialog({
           </div>
 
           {/* Action Buttons */}
-          <div className="flex justify-end gap-3 pt-6 border-t border-slate-200 dark:border-slate-700">
+          <div className="flex justify-end gap-3 pt-6 border-t border-border/40">
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={isLoading}
+              className="rounded-full border-border/40"
             >
               Cancel
             </Button>
             <Button
               type="submit"
               disabled={isLoading}
-              className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+              className="h-10 rounded-full px-5 text-xs font-bold"
             >
               {isLoading ? (
                 <>

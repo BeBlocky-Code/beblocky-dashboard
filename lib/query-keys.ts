@@ -89,7 +89,10 @@ export const queryKeys = {
   users: {
     /** Base key for all user queries */
     all: ["users"] as const,
-    
+
+    /** List all users */
+    list: () => [...queryKeys.users.all, "list"] as const,
+
     /** Current user */
     current: () => [...queryKeys.users.all, "current"] as const,
     
@@ -197,7 +200,7 @@ export const queryKeys = {
   },
 
   // ============================================
-  // PROGRESS (for future use)
+  // PROGRESS
   // ============================================
   progress: {
     /** Base key for all progress queries */
@@ -212,6 +215,14 @@ export const queryKeys = {
     /** Progress by student and course */
     byStudentAndCourse: (studentId: string, courseId: string) => 
       [...queryKeys.progress.all, "byStudentAndCourse", studentId, courseId] as const,
+  },
+
+  // ============================================
+  // CERTIFICATES
+  // ============================================
+  certificates: {
+    all: ["certificates"] as const,
+    stats: () => [...queryKeys.certificates.all, "stats"] as const,
   },
 
   // ============================================

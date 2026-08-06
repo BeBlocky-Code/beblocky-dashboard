@@ -460,7 +460,7 @@ export function ModernCreateClassDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
-        className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto scrollbar-hide p-0 bg-gradient-to-br from-background to-muted/20 border-border/50 backdrop-blur-sm"
+        className="max-h-[90vh] overflow-y-auto rounded-2xl border border-border/40 bg-card/95 p-0 backdrop-blur-sm scrollbar-hide sm:max-w-[700px]"
         onPointerDownOutside={(e) => {
           console.log("Dialog pointer down outside");
           // Prevent closing on outside click during step transitions
@@ -478,12 +478,10 @@ export function ModernCreateClassDialog({
       >
         <div className="relative">
           {/* Background Elements */}
-          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-full blur-3xl" />
-          <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-secondary/20 to-primary/20 rounded-full blur-2xl" />
 
           <div className="relative z-10 p-6">
             <DialogHeader className="space-y-4 mb-6">
-              <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+              <DialogTitle className="text-xl font-bold tracking-tight">
                 Create New Class
               </DialogTitle>
               <DialogDescription className="text-base text-muted-foreground">
@@ -496,9 +494,9 @@ export function ModernCreateClassDialog({
                 <motion.div
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="p-3 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800/50"
+                  className="rounded-xl border border-destructive/30 bg-destructive/10 p-3"
                 >
-                  <p className="text-sm text-red-700 dark:text-red-300">
+                  <p className="text-sm text-destructive">
                     {validationError}
                   </p>
                 </motion.div>
@@ -512,7 +510,7 @@ export function ModernCreateClassDialog({
                       className={cn(
                         "flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all duration-300",
                         index <= currentStep
-                          ? "bg-gradient-to-r from-primary to-secondary border-primary text-primary-foreground"
+                          ? "border-primary bg-primary text-primary-foreground"
                           : "border-muted-foreground/30 text-muted-foreground"
                       )}
                       animate={{
@@ -530,7 +528,7 @@ export function ModernCreateClassDialog({
                         className={cn(
                           "w-16 h-0.5 mx-2 transition-all duration-300",
                           index < currentStep
-                            ? "bg-gradient-to-r from-primary to-secondary"
+                            ? "bg-primary"
                             : "bg-muted-foreground/30"
                         )}
                       />
@@ -540,10 +538,10 @@ export function ModernCreateClassDialog({
               </div>
 
               {/* Current Step Info */}
-              <Card className="bg-card/50 backdrop-blur-sm border-border/50">
+              <Card className="rounded-xl border border-border/30 bg-muted/20">
                 <CardContent className="p-4">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-gradient-to-r from-primary/20 to-secondary/20">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-primary/10">
                       {React.createElement(steps[currentStep].icon, {
                         className: "h-5 w-5 text-primary",
                       })}
@@ -607,7 +605,7 @@ export function ModernCreateClassDialog({
                               <FormControl>
                                 <Input
                                   placeholder="e.g., Advanced Web Development"
-                                  className="h-12 bg-background/50 backdrop-blur-sm border-border/50"
+                                  className="h-12 border-border/40 bg-card/40"
                                   {...field}
                                 />
                               </FormControl>
@@ -627,7 +625,7 @@ export function ModernCreateClassDialog({
                               <FormControl>
                                 <Textarea
                                   placeholder="Describe what students will learn in this class..."
-                                  className="resize-none h-24 bg-background/50 backdrop-blur-sm border-border/50"
+                                  className="resize-none h-24 border-border/40 bg-card/40"
                                   {...field}
                                 />
                               </FormControl>
@@ -661,7 +659,7 @@ export function ModernCreateClassDialog({
                                       <Button
                                         variant="outline"
                                         className={cn(
-                                          "h-12 justify-start text-left font-normal bg-background/80 backdrop-blur-sm border-border/50 hover:bg-background/90 hover:border-primary/50 transition-all duration-200",
+                                          "h-12 justify-start text-left font-normal rounded-full border-border/40 bg-card/40 transition-all duration-200 hover:bg-muted/20",
                                           !field.value &&
                                             "text-muted-foreground"
                                         )}
@@ -678,7 +676,7 @@ export function ModernCreateClassDialog({
                                     </FormControl>
                                   </PopoverTrigger>
                                   <PopoverContent
-                                    className="w-auto p-0 bg-background/95 backdrop-blur-sm border-border/50"
+                                    className="w-auto rounded-2xl border border-border/40 bg-card/95 p-0 backdrop-blur-sm"
                                     align="start"
                                   >
                                     <Calendar
@@ -710,7 +708,7 @@ export function ModernCreateClassDialog({
                                       <Button
                                         variant="outline"
                                         className={cn(
-                                          "h-12 justify-start text-left font-normal bg-background/80 backdrop-blur-sm border-border/50 hover:bg-background/90 hover:border-secondary/50 transition-all duration-200",
+                                          "h-12 justify-start text-left font-normal rounded-full border-border/40 bg-card/40 transition-all duration-200 hover:bg-muted/20",
                                           !field.value &&
                                             "text-muted-foreground"
                                         )}
@@ -727,7 +725,7 @@ export function ModernCreateClassDialog({
                                     </FormControl>
                                   </PopoverTrigger>
                                   <PopoverContent
-                                    className="w-auto p-0 bg-background/95 backdrop-blur-sm border-border/50"
+                                    className="w-auto rounded-2xl border border-border/40 bg-card/95 p-0 backdrop-blur-sm"
                                     align="start"
                                   >
                                     <Calendar
@@ -752,17 +750,17 @@ export function ModernCreateClassDialog({
                             animate={{ opacity: 1, y: 0 }}
                             className="mt-4"
                           >
-                            <Card className="bg-gradient-to-r from-blue-50/80 to-blue-100/80 dark:from-blue-950/30 dark:to-blue-900/30 border-blue-200/50 dark:border-blue-800/50 backdrop-blur-sm">
+                            <Card className="rounded-xl border border-border/30 bg-muted/20">
                               <CardContent className="p-4">
                                 <div className="flex items-center gap-3">
-                                  <div className="p-2 rounded-lg bg-blue-500/20">
-                                    <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                                  <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-primary/10">
+                                    <Clock className="h-4 w-4 text-primary" />
                                   </div>
                                   <div>
-                                    <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                                    <p className="text-sm font-medium">
                                       Class Duration
                                     </p>
-                                    <p className="text-sm text-blue-700 dark:text-blue-300">
+                                    <p className="text-sm text-muted-foreground">
                                       {Math.ceil(
                                         (form.watch("endDate").getTime() -
                                           form.watch("startDate").getTime()) /
@@ -783,15 +781,15 @@ export function ModernCreateClassDialog({
                           </motion.div>
                         )}
 
-                        <Card className="bg-blue-50/50 dark:bg-blue-950/20 border-blue-200/50 dark:border-blue-800/50">
+                        <Card className="rounded-xl border border-border/30 bg-muted/20">
                           <CardContent className="p-4">
                             <div className="flex items-start gap-3">
-                              <Info className="h-5 w-5 text-blue-500 mt-0.5" />
+                              <Info className="mt-0.5 h-5 w-5 text-primary" />
                               <div className="space-y-1">
-                                <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                                <p className="text-sm font-medium">
                                   Class Duration
                                 </p>
-                                <p className="text-sm text-blue-700 dark:text-blue-300">
+                                <p className="text-sm text-muted-foreground">
                                   Students will have access to class materials
                                   and assignments during this period. You can
                                   extend the duration later if needed.
@@ -837,7 +835,7 @@ export function ModernCreateClassDialog({
                                       {courses.map((course) => (
                                         <div
                                           key={course._id}
-                                          className="flex items-center space-x-3 p-3 rounded-lg border border-border/50 bg-card/50 backdrop-blur-sm hover:bg-card/80 transition-colors"
+                                          className="flex items-center space-x-3 rounded-xl border border-border/30 bg-muted/20 p-3 transition-colors hover:bg-muted/30"
                                         >
                                           <Checkbox
                                             checked={
@@ -915,8 +913,8 @@ export function ModernCreateClassDialog({
                                       {courses.length > 0 &&
                                         (!field.value ||
                                           field.value.length === 0) && (
-                                          <div className="p-3 rounded-lg border border-yellow-200 bg-yellow-50/50 dark:border-yellow-800/50 dark:bg-yellow-950/20">
-                                            <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                                          <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-3">
+                                            <p className="text-sm text-destructive">
                                               ⚠️ Please select at least one
                                               course to continue.
                                             </p>
@@ -937,14 +935,14 @@ export function ModernCreateClassDialog({
                             animate={{ opacity: 1, y: 0 }}
                             className="mt-4"
                           >
-                            <Card className="bg-gradient-to-r from-green-50/80 to-green-100/80 dark:from-green-950/30 dark:to-green-900/30 border-green-200/50 dark:border-green-800/50 backdrop-blur-sm">
+                            <Card className="rounded-xl border border-border/30 bg-muted/20">
                               <CardContent className="p-4">
                                 <div className="flex items-center gap-3">
-                                  <div className="p-2 rounded-lg bg-green-500/20">
-                                    <GraduationCap className="h-4 w-4 text-green-600 dark:text-green-400" />
+                                  <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-primary/10">
+                                    <GraduationCap className="h-4 w-4 text-primary" />
                                   </div>
                                   <div>
-                                    <p className="text-sm font-medium text-green-900 dark:text-green-100">
+                                    <p className="text-sm font-medium">
                                       {form.watch("selectedCourses")?.length}{" "}
                                       Course
                                       {form.watch("selectedCourses")?.length !==
@@ -953,7 +951,7 @@ export function ModernCreateClassDialog({
                                         : ""}{" "}
                                       Selected
                                     </p>
-                                    <p className="text-sm text-green-700 dark:text-green-300">
+                                    <p className="text-sm text-muted-foreground">
                                       Students will have access to all selected
                                       courses
                                     </p>
@@ -981,7 +979,7 @@ export function ModernCreateClassDialog({
                                 <Input
                                   type="number"
                                   placeholder="e.g., 30"
-                                  className="h-12 bg-background/50 backdrop-blur-sm border-border/50"
+                                  className="h-12 border-border/40 bg-card/40"
                                   value={field.value || ""}
                                   onChange={(e) =>
                                     field.onChange(
@@ -1005,7 +1003,7 @@ export function ModernCreateClassDialog({
                             control={form.control}
                             name="allowSelfEnrollment"
                             render={({ field }) => (
-                              <FormItem className="flex flex-row items-center justify-between rounded-lg border border-border/50 bg-card/50 backdrop-blur-sm p-4">
+                              <FormItem className="flex flex-row items-center justify-between rounded-xl border border-border/40 bg-muted/20 p-4">
                                 <div className="space-y-0.5">
                                   <FormLabel className="text-base font-medium">
                                     Allow Self-Enrollment
@@ -1029,7 +1027,7 @@ export function ModernCreateClassDialog({
                             control={form.control}
                             name="requireApproval"
                             render={({ field }) => (
-                              <FormItem className="flex flex-row items-center justify-between rounded-lg border border-border/50 bg-card/50 backdrop-blur-sm p-4">
+                              <FormItem className="flex flex-row items-center justify-between rounded-xl border border-border/40 bg-muted/20 p-4">
                                 <div className="space-y-0.5">
                                   <FormLabel className="text-base font-medium">
                                     Require Approval
@@ -1050,15 +1048,15 @@ export function ModernCreateClassDialog({
                         </div>
 
                         {isLoading ? (
-                          <Card className="bg-blue-50/50 dark:bg-blue-950/20 border-blue-200/50 dark:border-blue-800/50">
+                          <Card className="rounded-xl border border-border/30 bg-muted/20">
                             <CardContent className="p-4">
                               <div className="flex items-start gap-3">
-                                <Loader2 className="h-5 w-5 text-blue-500 mt-0.5 animate-spin" />
+                                <Loader2 className="mt-0.5 h-5 w-5 animate-spin text-primary" />
                                 <div className="space-y-1">
-                                  <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                                  <p className="text-sm font-medium">
                                     Creating Your Class
                                   </p>
-                                  <p className="text-sm text-blue-700 dark:text-blue-300">
+                                  <p className="text-sm text-muted-foreground">
                                     {creationProgress || "Please wait..."}
                                   </p>
                                 </div>
@@ -1066,15 +1064,15 @@ export function ModernCreateClassDialog({
                             </CardContent>
                           </Card>
                         ) : (
-                          <Card className="bg-green-50/50 dark:bg-green-950/20 border-green-200/50 dark:border-green-800/50">
+                          <Card className="rounded-xl border border-border/30 bg-muted/20">
                             <CardContent className="p-4">
                               <div className="flex items-start gap-3">
-                                <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
+                                <CheckCircle className="mt-0.5 h-5 w-5 text-primary" />
                                 <div className="space-y-1">
-                                  <p className="text-sm font-medium text-green-900 dark:text-green-100">
+                                  <p className="text-sm font-medium">
                                     Ready to Create
                                   </p>
-                                  <p className="text-sm text-green-700 dark:text-green-300">
+                                  <p className="text-sm text-muted-foreground">
                                     Your class is configured and ready to be
                                     created. You can modify these settings
                                     later.
@@ -1090,14 +1088,14 @@ export function ModernCreateClassDialog({
                 </AnimatePresence>
 
                 {/* Navigation Buttons */}
-                <div className="flex justify-between pt-6 border-t border-border/50">
+                <div className="flex justify-between border-t border-border/40 pt-6">
                   <div className="flex gap-3">
                     <Button
                       type="button"
                       variant="outline"
                       onClick={() => onOpenChange(false)}
                       disabled={isLoading}
-                      className="bg-background/50 backdrop-blur-sm border-border/50"
+                      className="rounded-full border-border/40"
                     >
                       Cancel
                     </Button>
@@ -1107,7 +1105,7 @@ export function ModernCreateClassDialog({
                         variant="outline"
                         onClick={prevStep}
                         disabled={isLoading}
-                        className="bg-background/50 backdrop-blur-sm border-border/50"
+                        className="rounded-full border-border/40"
                       >
                         Previous
                       </Button>
@@ -1125,7 +1123,7 @@ export function ModernCreateClassDialog({
                           nextStep();
                         }}
                         disabled={isLoading}
-                        className="bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90"
+                        className="rounded-full"
                       >
                         Next Step
                       </Button>
@@ -1133,7 +1131,7 @@ export function ModernCreateClassDialog({
                       <Button
                         type="submit"
                         disabled={isLoading}
-                        className="bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90"
+                        className="rounded-full"
                       >
                         {isLoading ? (
                           <>

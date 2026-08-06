@@ -88,14 +88,14 @@ export function ModernClassSettingsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-background/95 backdrop-blur-sm border-border/50">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-border/40 bg-card/95 backdrop-blur-sm">
         <DialogHeader className="space-y-3">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-gradient-to-r from-purple-500/20 to-pink-500/20">
-              <Settings className="h-5 w-5 text-purple-500" />
+            <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-primary/10">
+              <Settings className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <DialogTitle className="text-xl font-semibold">
+              <DialogTitle className="text-xl font-bold tracking-tight">
                 Class Settings
               </DialogTitle>
               <p className="text-sm text-muted-foreground">
@@ -113,7 +113,7 @@ export function ModernClassSettingsDialog({
             </h3>
 
             <div className="space-y-4">
-              <div className="flex items-center justify-between p-3 rounded-lg bg-background/50 backdrop-blur-sm border border-border/50">
+              <div className="flex items-center justify-between rounded-xl border border-border/40 bg-muted/20 p-3">
                 <div className="space-y-1">
                   <Label className="text-sm font-medium">
                     Allow Student Enrollment
@@ -133,7 +133,7 @@ export function ModernClassSettingsDialog({
                 />
               </div>
 
-              <div className="flex items-center justify-between p-3 rounded-lg bg-background/50 backdrop-blur-sm border border-border/50">
+              <div className="flex items-center justify-between rounded-xl border border-border/40 bg-muted/20 p-3">
                 <div className="space-y-1">
                   <Label className="text-sm font-medium">
                     Require Approval
@@ -150,7 +150,7 @@ export function ModernClassSettingsDialog({
                 />
               </div>
 
-              <div className="flex items-center justify-between p-3 rounded-lg bg-background/50 backdrop-blur-sm border border-border/50">
+              <div className="flex items-center justify-between rounded-xl border border-border/40 bg-muted/20 p-3">
                 <div className="space-y-1">
                   <Label className="text-sm font-medium">Auto Progress</Label>
                   <p className="text-xs text-muted-foreground">
@@ -168,15 +168,15 @@ export function ModernClassSettingsDialog({
           </div>
         </div>
 
-        <div className="flex justify-between pt-4 border-t border-border/50">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+        <div className="flex justify-between border-t border-border/40 pt-4">
+          <Button variant="outline" className="rounded-full border-border/40" onClick={() => onOpenChange(false)}>
             <X className="h-4 w-4 mr-2" />
             Cancel
           </Button>
           <Button
             onClick={handleSave}
             disabled={isLoading}
-            className="bg-gradient-to-r from-primary to-secondary"
+            className="rounded-full"
           >
             <AnimatePresence mode="wait">
               {isLoading ? (

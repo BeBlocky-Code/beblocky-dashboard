@@ -5,6 +5,44 @@ const AUTH_QUERY_PARAMS = ["callbackUrl", "origin", "token"] as const;
 const DEFAULT_DASHBOARD_URL =
   process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3002";
 
+/**
+ * Session tokens are URL-safe base64 and often end with "=".
+ * Next/browsers may percent-encode cookie values ("=" → "%3D"), which breaks
+ * auth-api token hashing. Always normalize before using a session token.
+ */
+export function normalizeSessionToken(
+  raw: string | undefined | null
+): string | undefined {
+  if (!raw) return undefined;
+  let token = raw.trim();
+  if (!token) return undefined;
+  if (/%[0-9A-Fa-f]{2}/.test(token)) {
+    try {
+      token = decodeURIComponent(token);
+    } catch {
+      // keep raw
+    }
+  }
+  return token;
+}
+
+/** Build a Set-Cookie header value without percent-encoding the token. */
+export function buildSessionCookieHeader(
+  token: string,
+  options?: { secure?: boolean; maxAge?: number }
+): string {
+  const maxAge = options?.maxAge ?? 7 * 24 * 3600;
+  const parts = [
+    `session=${token}`,
+    "Path=/",
+    "HttpOnly",
+    "SameSite=Lax",
+    `Max-Age=${maxAge}`,
+  ];
+  if (options?.secure) parts.push("Secure");
+  return parts.join("; ");
+}
+
 function stripAuthQueryParams(url: URL): void {
   for (const key of AUTH_QUERY_PARAMS) {
     url.searchParams.delete(key);

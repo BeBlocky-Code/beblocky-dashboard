@@ -52,7 +52,6 @@ export function ModernDeleteConfirmationDialog({
     switch (itemType) {
       case "course":
         return {
-          icon: <AlertTriangle className="h-12 w-12 text-red-500" />,
           warning: "This will permanently delete the course and all associated lessons and slides.",
           consequences: [
             "All student progress will be lost",
@@ -62,7 +61,6 @@ export function ModernDeleteConfirmationDialog({
         }
       case "lesson":
         return {
-          icon: <AlertTriangle className="h-12 w-12 text-red-500" />,
           warning: "This will permanently delete the lesson and all associated slides.",
           consequences: [
             "Student progress in this lesson will be lost",
@@ -72,13 +70,11 @@ export function ModernDeleteConfirmationDialog({
         }
       case "slide":
         return {
-          icon: <AlertTriangle className="h-12 w-12 text-red-500" />,
           warning: "This will permanently delete the slide.",
           consequences: ["Slide content will be permanently removed", "This action cannot be undone"],
         }
       default:
         return {
-          icon: <AlertTriangle className="h-12 w-12 text-red-500" />,
           warning: "This action cannot be undone.",
           consequences: [],
         }
@@ -89,35 +85,33 @@ export function ModernDeleteConfirmationDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto scrollbar-hide border-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm">
-        <div className="absolute inset-0 bg-gradient-to-br from-red-50/50 via-transparent to-red-100/50 dark:from-red-950/20 dark:to-red-900/20"></div>
-
-        <DialogHeader className="relative z-10 text-center pb-6">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto scrollbar-hide rounded-2xl border border-border/40 bg-card/95 backdrop-blur-sm shadow-sm">
+        <DialogHeader className="text-center pb-6">
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ duration: 0.3, type: "spring" }}
-            className="mx-auto mb-4"
+            className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-destructive/10"
           >
-            {warningContent.icon}
+            <AlertTriangle className="h-6 w-6 text-destructive" />
           </motion.div>
 
-          <DialogTitle className="text-2xl font-bold text-red-600 dark:text-red-400">{title}</DialogTitle>
+          <DialogTitle className="text-xl font-bold tracking-tight text-destructive">{title}</DialogTitle>
 
           <p className="text-muted-foreground mt-2">{warningContent.warning}</p>
         </DialogHeader>
 
-        <div className="relative z-10 space-y-6">
+        <div className="space-y-6">
           {/* Warning Box */}
-          <div className="p-4 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-xl">
+          <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-4">
             <div className="flex items-start gap-3">
-              <Shield className="h-5 w-5 text-red-500 mt-0.5 flex-shrink-0" />
+              <Shield className="h-5 w-5 text-destructive mt-0.5 flex-shrink-0" />
               <div className="space-y-2">
-                <h4 className="font-semibold text-red-800 dark:text-red-200">Consequences of this action:</h4>
-                <ul className="space-y-1 text-sm text-red-700 dark:text-red-300">
+                <h4 className="font-semibold text-destructive">Consequences of this action:</h4>
+                <ul className="space-y-1 text-sm text-muted-foreground">
                   {warningContent.consequences.map((consequence, index) => (
                     <li key={index} className="flex items-center gap-2">
-                      <div className="h-1.5 w-1.5 rounded-full bg-red-500"></div>
+                      <div className="h-1.5 w-1.5 rounded-full bg-destructive"></div>
                       {consequence}
                     </li>
                   ))}
@@ -130,14 +124,14 @@ export function ModernDeleteConfirmationDialog({
           <div className="space-y-3">
             <Label htmlFor="confirmationText" className="text-sm font-medium">
               To confirm deletion, type{" "}
-              <span className="font-bold text-red-600 dark:text-red-400">{getItemName()}</span>
+              <span className="font-bold text-destructive">{getItemName()}</span>
             </Label>
             <Input
               id="confirmationText"
               value={confirmationText}
               onChange={(e) => setConfirmationText(e.target.value)}
               placeholder={`Type ${itemType} name to confirm`}
-              className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-red-500/20 focus:border-red-500"
+              className="border-border/40 bg-card/40 focus:ring-2 focus:ring-destructive/20 focus:border-destructive/40"
             />
           </div>
 
@@ -147,16 +141,17 @@ export function ModernDeleteConfirmationDialog({
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              className="flex-1"
+              className="flex-1 rounded-full border-border/40"
               disabled={isDeleting}
             >
               Cancel
             </Button>
             <Button
               type="button"
+              variant="destructive"
               onClick={handleConfirm}
               disabled={!isConfirmationValid || isDeleting}
-              className="flex-1 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+              className="flex-1 h-10 rounded-full px-5 text-xs font-bold"
             >
               {isDeleting ? (
                 <motion.div

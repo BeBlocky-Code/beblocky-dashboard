@@ -46,7 +46,7 @@ export {
 } from "./use-classes";
 
 // User hooks
-export { useUserByEmail, useCurrentUser } from "./use-users";
+export { useAllUsers, useUserByEmail, useCurrentUser } from "./use-users";
 
 // Student hooks
 export {
@@ -58,6 +58,9 @@ export {
 
 // Progress hooks
 export { useAllProgress } from "./use-progress";
+
+// Certificate hooks
+export { useCertificateStats } from "./use-certificates";
 
 // Teacher hooks
 export {

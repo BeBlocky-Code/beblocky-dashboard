@@ -32,6 +32,7 @@ import {
   type ClientCourse,
 } from "@/lib/api/course";
 import { useSession } from "@/lib/auth-client";
+import { cn } from "@/lib/utils";
 
 interface ModernEditCourseDialogProps {
   open: boolean;
@@ -108,25 +109,23 @@ export function ModernEditCourseDialog({
   const getSubTypeColor = (subType: CourseSubscriptionType) => {
     switch (subType) {
       case CourseSubscriptionType.PRO:
-        return "from-purple-500 to-purple-600";
+        return "border-primary/40 bg-primary/10 text-primary";
       case CourseSubscriptionType.STARTER:
-        return "from-blue-500 to-blue-600";
+        return "border-secondary/40 bg-secondary/10 text-secondary";
       case CourseSubscriptionType.BUILDER:
-        return "from-yellow-500 to-yellow-600";
+        return "border-primary/40 bg-muted/30 text-primary";
       case CourseSubscriptionType.ORGANIZATION:
-        return "from-green-500 to-green-600";
+        return "border-secondary/40 bg-muted/30 text-secondary";
       default:
-        return "from-gray-500 to-gray-600";
+        return "border-border/40 bg-muted/30 text-muted-foreground";
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto scrollbar-hide border-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5"></div>
-
-        <DialogHeader className="relative z-10 pb-6">
-          <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-slate-300 bg-clip-text text-transparent">
+      <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto scrollbar-hide rounded-2xl border border-border/40 bg-card/95 backdrop-blur-sm shadow-sm">
+        <DialogHeader className="pb-6">
+          <DialogTitle className="text-xl font-bold tracking-tight">
             Edit Course Details
           </DialogTitle>
           <p className="text-muted-foreground">
@@ -134,9 +133,9 @@ export function ModernEditCourseDialog({
           </p>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="relative z-10 space-y-8">
+        <form onSubmit={handleSubmit} className="space-y-8">
           {error && (
-            <div className="p-3 text-sm text-red-500 bg-red-50 dark:bg-red-900/20 rounded-md">
+            <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
               {error}
             </div>
           )}
@@ -160,7 +159,7 @@ export function ModernEditCourseDialog({
                       setFormData({ ...formData, courseTitle: e.target.value })
                     }
                     placeholder="Enter course title"
-                    className="mt-2 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-primary/20"
+                    className="mt-2 border-border/40 bg-card/40 focus:ring-2 focus:ring-primary/20"
                     required
                   />
                 </div>
@@ -183,7 +182,7 @@ export function ModernEditCourseDialog({
                     }
                     placeholder="Describe your course"
                     rows={4}
-                    className="mt-2 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-primary/20"
+                    className="mt-2 border-border/40 bg-card/40 focus:ring-2 focus:ring-primary/20"
                     required
                   />
                 </div>
@@ -203,7 +202,7 @@ export function ModernEditCourseDialog({
                         setFormData({ ...formData, courseLanguage: value })
                       }
                     >
-                      <SelectTrigger className="mt-2 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-slate-200 dark:border-slate-700">
+                      <SelectTrigger className="mt-2 border-border/40 bg-card/40">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -226,7 +225,7 @@ export function ModernEditCourseDialog({
                         })
                       }
                     >
-                      <SelectTrigger className="mt-2 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-slate-200 dark:border-slate-700">
+                      <SelectTrigger className="mt-2 border-border/40 bg-card/40">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -255,7 +254,7 @@ export function ModernEditCourseDialog({
                         className={`p-3 rounded-lg border-2 transition-all duration-200 ${
                           formData.subType === type
                             ? "border-primary bg-primary/10"
-                            : "border-slate-200 dark:border-slate-700 hover:border-primary/50"
+                            : "border-border/40 hover:border-primary/50"
                         }`}
                       >
                         <div className="flex items-center justify-center gap-2">
@@ -271,7 +270,7 @@ export function ModernEditCourseDialog({
 
             {/* Right Column - Preview */}
             <div className="space-y-6">
-              <div className="p-6 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800/50 dark:to-slate-700/50 rounded-2xl border border-slate-200 dark:border-slate-700">
+              <div className="rounded-2xl border border-border/40 bg-muted/20 p-6">
                 <h4 className="font-semibold mb-4 flex items-center gap-2">
                   <BookOpen className="h-4 w-4" />
                   Course Preview
@@ -290,26 +289,28 @@ export function ModernEditCourseDialog({
 
                   <div className="flex flex-wrap gap-2">
                     <Badge
-                      className={`bg-gradient-to-r ${getSubTypeColor(formData.subType)} text-white border-0`}
+                      variant="outline"
+                      className={cn("rounded-full", getSubTypeColor(formData.subType))}
                     >
                       {formData.subType}
                     </Badge>
-                    <Badge variant="outline">{formData.courseLanguage}</Badge>
+                    <Badge variant="outline" className="rounded-full border-border/40 bg-muted/30">
+                      {formData.courseLanguage}
+                    </Badge>
                     <Badge
-                      variant={
-                        formData.status === "Active" ? "default" : "secondary"
-                      }
-                      className={
+                      variant="outline"
+                      className={cn(
+                        "rounded-full",
                         formData.status === "Active"
-                          ? "bg-green-500 hover:bg-green-600"
-                          : "bg-yellow-500 hover:bg-yellow-600"
-                      }
+                          ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                          : "border-border/40 bg-muted/30 text-muted-foreground"
+                      )}
                     >
                       {formData.status}
                     </Badge>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                  <div className="grid grid-cols-3 gap-4 pt-4 border-t border-border/40">
                     <div className="text-center">
                       <p className="text-lg font-semibold">
                         {formData.students}
@@ -330,11 +331,11 @@ export function ModernEditCourseDialog({
                 </div>
               </div>
 
-              <div className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20 rounded-xl p-6 border border-blue-200 dark:border-blue-800/30">
-                <h4 className="font-semibold text-blue-800 dark:text-blue-200 mb-2">
-                  💡 Course Management
+              <div className="rounded-2xl border border-border/40 bg-muted/20 p-6">
+                <h4 className="font-semibold mb-2">
+                  Course Management
                 </h4>
-                <p className="text-sm text-blue-700 dark:text-blue-300">
+                <p className="text-sm text-muted-foreground">
                   After saving changes, you can manage lessons and slides
                   through the course editor tabs.
                 </p>
@@ -343,19 +344,20 @@ export function ModernEditCourseDialog({
           </div>
 
           {/* Action Buttons */}
-          <div className="flex justify-end gap-3 pt-6 border-t border-slate-200 dark:border-slate-700">
+          <div className="flex justify-end gap-3 pt-6 border-t border-border/40">
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={isLoading}
+              className="rounded-full border-border/40"
             >
               Cancel
             </Button>
             <Button
               type="submit"
               disabled={isLoading}
-              className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+              className="h-10 rounded-full px-5 text-xs font-bold"
             >
               {isLoading ? (
                 <motion.div

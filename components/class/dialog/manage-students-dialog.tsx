@@ -49,6 +49,7 @@ import type { IClass } from "@/types/class";
 import { studentApi } from "@/lib/api/student";
 import { classApi } from "@/lib/api/class";
 import { userApi } from "@/lib/api/user";
+import { progressApi } from "@/lib/api/progress";
 import { useSession } from "@/lib/auth-client";
 import { toast } from "sonner";
 import { ErrorPopup } from "@/components/ui/error-popup";
@@ -139,6 +140,17 @@ export function ModernManageStudentsDialog({
 
       // Get class data to access student IDs
       const classData = await classApi.getClassById(classId, userData);
+      const allProgress = await progressApi.getAllProgress();
+
+      const averageProgressForStudent = (...studentKeys: string[]) => {
+        const keySet = new Set(studentKeys.filter(Boolean));
+        const records = allProgress.filter((p) => keySet.has(p.studentId));
+        if (records.length === 0) return 0;
+        return Math.round(
+          records.reduce((sum, r) => sum + (r.completionPercentage || 0), 0) /
+            records.length
+        );
+      };
 
       // Load student data for each student ID in the class
       const studentPromises = classData.students.map(async (studentId) => {
@@ -161,7 +173,11 @@ export function ModernManageStudentsDialog({
             status: "active" as const,
             joinedAt: studentData.createdAt || new Date(),
             lastActive: studentData.lastCodingActivity || new Date(),
-            progress: Math.floor(Math.random() * 100), // Mock progress for now
+            progress: averageProgressForStudent(
+              studentData._id?.toString() || "",
+              studentData.userId?.toString() || "",
+              studentIdString
+            ),
             avatar: userData.image,
             dateOfBirth: studentData.dateOfBirth,
             grade: studentData.grade,
@@ -547,7 +563,7 @@ export function ModernManageStudentsDialog({
       case "admin":
         return <Crown className="h-3 w-3 text-yellow-500" />;
       case "moderator":
-        return <Shield className="h-3 w-3 text-blue-500" />;
+        return <Shield className="h-3 w-3 text-primary" />;
       default:
         return <User className="h-3 w-3 text-gray-500" />;
     }
@@ -581,14 +597,14 @@ export function ModernManageStudentsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] bg-background/95 backdrop-blur-sm border-border/50">
+      <DialogContent className="max-w-4xl max-h-[90vh] rounded-2xl border border-border/40 bg-card/95 backdrop-blur-sm">
         <DialogHeader className="space-y-3">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-gradient-to-r from-blue-500/20 to-purple-500/20">
-              <Users className="h-5 w-5 text-blue-500" />
+            <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-primary/10">
+              <Users className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <DialogTitle className="text-xl font-semibold">
+              <DialogTitle className="text-xl font-bold tracking-tight">
                 Manage Students
               </DialogTitle>
               <p className="text-sm text-muted-foreground">{className}</p>
@@ -597,7 +613,7 @@ export function ModernManageStudentsDialog({
         </DialogHeader>
 
         <Tabs defaultValue="students" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-2 bg-muted/50">
+          <TabsList className="grid w-full grid-cols-2 rounded-xl border border-border/30 bg-muted/20">
             <TabsTrigger value="students" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               Students ({students.length})
@@ -617,7 +633,7 @@ export function ModernManageStudentsDialog({
                   placeholder="Search students..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 bg-background/50 backdrop-blur-sm border-border/50"
+                  className="pl-10 border-border/40 bg-card/40"
                 />
               </div>
             </div>
@@ -627,21 +643,21 @@ export function ModernManageStudentsDialog({
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="flex items-center justify-between p-3 bg-primary/10 rounded-lg border border-primary/20"
+                className="flex items-center justify-between rounded-xl border border-border/30 bg-muted/20 p-3"
               >
                 <span className="text-sm font-medium">
                   {selectedStudents.length} student
                   {selectedStudents.length > 1 ? "s" : ""} selected
                 </span>
                 <div className="flex gap-2">
-                  <Button size="sm" variant="outline">
+                  <Button size="sm" variant="outline" className="rounded-full border-border/40">
                     <Download className="h-4 w-4 mr-2" />
                     Export
                   </Button>
                   <Button
                     size="sm"
                     variant="outline"
-                    className="text-red-600 hover:text-red-700 bg-transparent"
+                    className="rounded-full border-border/40 text-destructive hover:text-destructive"
                     onClick={handleBulkRemove}
                     disabled={isLoading}
                   >
@@ -662,7 +678,7 @@ export function ModernManageStudentsDialog({
               ) : (
                 <>
                   {/* Header */}
-                  <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg text-sm font-medium">
+                  <div className="flex items-center gap-3 rounded-xl border border-border/30 bg-muted/20 p-3 text-sm font-medium">
                     <Checkbox
                       checked={
                         selectedStudents.length === filteredStudents.length &&
@@ -685,7 +701,7 @@ export function ModernManageStudentsDialog({
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -20 }}
                         transition={{ delay: index * 0.05 }}
-                        className="flex items-center gap-3 p-3 bg-background/50 backdrop-blur-sm border border-border/50 rounded-lg hover:bg-background/80 transition-colors"
+                        className="flex items-center gap-3 rounded-xl border border-border/30 bg-muted/20 p-3 transition-colors hover:bg-muted/30"
                       >
                         <Checkbox
                           checked={selectedStudents.includes(student._id)}
@@ -700,7 +716,7 @@ export function ModernManageStudentsDialog({
                               src={student.avatar || "/placeholder.svg"}
                               alt={student.name}
                             />
-                            <AvatarFallback className="bg-gradient-to-r from-primary/20 to-secondary/20">
+                            <AvatarFallback className="bg-primary/10 text-primary">
                               {student.name
                                 .split(" ")
                                 .map((n) => n[0])
@@ -766,7 +782,7 @@ export function ModernManageStudentsDialog({
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
-                              className="text-red-600"
+                              className="text-destructive"
                               onClick={() => handleRemoveStudent(student._id)}
                             >
                               <Trash2 className="h-4 w-4 mr-2" />
@@ -803,7 +819,7 @@ export function ModernManageStudentsDialog({
                     placeholder="student@example.com"
                     value={inviteEmail}
                     onChange={(e) => setInviteEmail(e.target.value)}
-                    className="bg-background/50 backdrop-blur-sm border-border/50"
+                    className="border-border/40 bg-card/40"
                     onKeyDown={(e) =>
                       e.key === "Enter" && handleInviteStudent()
                     }
@@ -811,6 +827,7 @@ export function ModernManageStudentsDialog({
                   <Button
                     onClick={handleInviteStudent}
                     disabled={isLoading || !inviteEmail.trim()}
+                    className="rounded-full"
                   >
                     {isLoading ? (
                       <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -825,7 +842,7 @@ export function ModernManageStudentsDialog({
 
               <div className="space-y-2">
                 <Label>Bulk Import from CSV</Label>
-                <div className="border-2 border-dashed border-border/50 rounded-lg p-6 text-center">
+                <div className="rounded-xl border border-dashed border-border/40 bg-muted/20 p-6 text-center">
                   <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
                   <p className="text-sm text-muted-foreground mb-2">
                     Drop a CSV file here or click to upload
@@ -834,14 +851,14 @@ export function ModernManageStudentsDialog({
                     <p>
                       CSV should contain email addresses in the first column
                     </p>
-                    <p className="font-mono bg-muted/50 p-1 rounded text-xs">
+                    <p className="rounded-lg border border-border/30 bg-muted/20 p-1 font-mono text-xs">
                       email
                       <br />
                       student1@example.com
                       <br />
                       student2@example.com
                     </p>
-                    <p className="text-orange-600 dark:text-orange-400">
+                    <p className="text-muted-foreground">
                       ⚠️ Students must already exist in the system
                     </p>
                   </div>
@@ -855,6 +872,7 @@ export function ModernManageStudentsDialog({
                   <Button
                     variant="outline"
                     size="sm"
+                    className="rounded-full border-border/40"
                     onClick={() => fileInputRef.current?.click()}
                     disabled={isUploading}
                   >
@@ -873,15 +891,15 @@ export function ModernManageStudentsDialog({
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="space-y-3 p-4 rounded-lg border border-border/50 bg-background/50"
+                  className="space-y-3 rounded-xl border border-border/30 bg-muted/20 p-4"
                 >
                   <div className="flex items-center justify-between">
                     <h4 className="font-medium">Import Results</h4>
                     <div className="flex gap-2 text-sm">
-                      <span className="text-green-600">
+                      <span className="text-primary">
                         Success: {importResults.success}
                       </span>
-                      <span className="text-red-600">
+                      <span className="text-destructive">
                         Failed: {importResults.failed}
                       </span>
                     </div>
@@ -892,10 +910,10 @@ export function ModernManageStudentsDialog({
                       <div
                         key={index}
                         className={cn(
-                          "flex items-center gap-2 text-sm p-2 rounded",
+                          "flex items-center gap-2 rounded-lg p-2 text-sm",
                           result.status === "success"
-                            ? "bg-green-50 text-green-800 dark:bg-green-900/20 dark:text-green-400"
-                            : "bg-red-50 text-red-800 dark:bg-red-900/20 dark:text-red-400"
+                            ? "border border-border/30 bg-muted/20 text-foreground"
+                            : "rounded-xl border border-destructive/30 bg-destructive/10 text-destructive"
                         )}
                       >
                         {result.status === "success" ? (
@@ -916,8 +934,8 @@ export function ModernManageStudentsDialog({
           </TabsContent>
         </Tabs>
 
-        <div className="flex justify-end pt-4 border-t border-border/50">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+        <div className="flex justify-end border-t border-border/40 pt-4">
+          <Button variant="outline" className="rounded-full border-border/40" onClick={() => onOpenChange(false)}>
             <X className="h-4 w-4 mr-2" />
             Close
           </Button>
