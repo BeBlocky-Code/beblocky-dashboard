@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Eye, BookOpen } from "lucide-react";
@@ -29,6 +30,8 @@ import {
   reorderSlides,
   type ClientCourse,
 } from "@/lib/api/course";
+import { queryKeys } from "@/lib/query-keys";
+import { STALE_TIMES } from "@/lib/query-client";
 import { useAuth } from "@/hooks/use-auth";
 import { getIdeLearnUrl } from "@/lib/utils";
 import { CourseEditorPageSkeleton } from "../loading/course-edit-skeleton";
@@ -92,6 +95,7 @@ function writeWorkspaceSession(
 export function CourseWorkspace({ mode, courseId }: CourseWorkspaceProps) {
   const router = useRouter();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
 
   const restored = useMemo(
     () => readWorkspaceSession(mode, courseId),
@@ -130,7 +134,12 @@ export function CourseWorkspace({ mode, courseId }: CourseWorkspaceProps) {
     const load = async () => {
       try {
         setIsLoading(true);
-        const data = await fetchCompleteCourseData(courseId);
+        // Reuse TanStack cache (seeded by card hover/click prefetch when available).
+        const data = await queryClient.fetchQuery({
+          queryKey: queryKeys.courses.completeData(courseId),
+          queryFn: () => fetchCompleteCourseData(courseId),
+          staleTime: STALE_TIMES.STATIC,
+        });
         setCourse(data.course);
         setLessons(data.lessons);
         setSlides(data.slides);
@@ -166,7 +175,7 @@ export function CourseWorkspace({ mode, courseId }: CourseWorkspaceProps) {
     };
 
     load();
-  }, [mode, courseId]);
+  }, [mode, courseId, queryClient]);
 
   // Persist editor session (tab + selection) across refresh
   useEffect(() => {

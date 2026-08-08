@@ -24,7 +24,7 @@ import {
   Minus,
   Eye,
   Edit3,
-  Sparkles,
+  FileText,
   Type,
   Heading1,
   Heading2,
@@ -1113,7 +1113,7 @@ export default function MarkdownEditor({
                 >
                   <Badge className="bg-gradient-to-r from-blue-500 to-purple-500 text-white border-0 shadow-lg">
                     <Code className="h-3 w-3 mr-1" />
-                    <Sparkles className="h-3 w-3 mr-1" />
+                    <FileText className="h-3 w-3 mr-1" />
                     Markdown
                   </Badge>
                 </motion.div>
@@ -1244,7 +1244,7 @@ Type / for commands`}
                 className="space-y-4"
               >
                 <h4 className="text-sm font-medium flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-secondary" />
+                  <LinkIcon className="h-4 w-4 text-secondary" />
                   External Image
                 </h4>
                 <div className="grid grid-cols-2 gap-4">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useTransition } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,7 @@ import {
   Clock,
   TrendingUp,
   Layers,
+  Loader2,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -29,8 +30,11 @@ import { toast } from "sonner";
 import { CourseStatus, CourseSubscriptionType } from "@/types/course";
 import { DeleteCourseConfirmationDialog } from "./dialogs/delete-course-confirmation-dialog";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { useCoursesWithDetails, useDeleteCourse } from "@/lib/hooks/queries";
-import type { ClientCourse } from "@/lib/api/course";
+import { fetchCompleteCourseData, type ClientCourse } from "@/lib/api/course";
+import { queryKeys } from "@/lib/query-keys";
+import { STALE_TIMES } from "@/lib/query-client";
 import { cn } from "@/lib/utils";
 import { useThemeContext } from "@/components/theme-provider";
 
@@ -264,9 +268,22 @@ interface ModernCourseCardProps {
 
 function ModernCourseCard({ course, onDelete }: ModernCourseCardProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const [isPending, startTransition] = useTransition();
+
+  const prefetchCourse = () => {
+    void queryClient.prefetchQuery({
+      queryKey: queryKeys.courses.completeData(course._id),
+      queryFn: () => fetchCompleteCourseData(course._id),
+      staleTime: STALE_TIMES.STATIC,
+    });
+  };
 
   const handleEdit = () => {
-    router.push(`/courses/${course._id}/edit`);
+    prefetchCourse();
+    startTransition(() => {
+      router.push(`/courses/${course._id}/edit`);
+    });
   };
 
   const handleDelete = () => {
@@ -275,9 +292,20 @@ function ModernCourseCard({ course, onDelete }: ModernCourseCardProps) {
 
   return (
     <Card
-      className="group cursor-pointer overflow-hidden rounded-2xl border border-border/40 bg-card/40 shadow-sm backdrop-blur-sm transition-all duration-300 hover:border-border/60 hover:bg-card/70 hover:shadow-md"
+      className={cn(
+        "group relative cursor-pointer overflow-hidden rounded-2xl border border-border/40 bg-card/40 shadow-sm backdrop-blur-sm transition-all duration-300 hover:border-border/60 hover:bg-card/70 hover:shadow-md",
+        isPending && "pointer-events-none opacity-70"
+      )}
       onClick={handleEdit}
+      onMouseEnter={prefetchCourse}
+      onFocus={prefetchCourse}
+      aria-busy={isPending}
     >
+      {isPending && (
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/50 backdrop-blur-[1px]">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        </div>
+      )}
       <div className="border-b border-border/40 bg-muted/20 p-5 backdrop-blur-sm">
         <div className="mb-4 flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
@@ -304,6 +332,7 @@ function ModernCourseCard({ course, onDelete }: ModernCourseCardProps) {
                 size="icon"
                 className="h-8 w-8 rounded-full opacity-0 transition-opacity group-hover:opacity-100"
                 onClick={(e) => e.stopPropagation()}
+                disabled={isPending}
               >
                 <MoreVertical className="h-4 w-4" />
               </Button>
@@ -312,6 +341,7 @@ function ModernCourseCard({ course, onDelete }: ModernCourseCardProps) {
               <DropdownMenuItem
                 onClick={handleEdit}
                 className="flex items-center"
+                disabled={isPending}
               >
                 <Edit2 className="mr-2 h-4 w-4" />
                 Edit Course

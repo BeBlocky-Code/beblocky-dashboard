@@ -30,7 +30,7 @@ import {
   Calendar,
   UserCheck,
   Clock,
-  Sparkles,
+  Coins,
   Filter,
   Download,
   AlertCircle,
@@ -443,7 +443,7 @@ export default function AdminStudentsPage() {
           <StatCard
             title="Total Coins"
             value={analytics.totalCoins.toLocaleString()}
-            icon={Sparkles}
+            icon={Coins}
             iconClass="text-primary bg-muted/40"
             delay={0.1}
           />
@@ -683,7 +683,7 @@ export default function AdminStudentsPage() {
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">
-                            <Sparkles className="h-3 w-3 text-secondary" />
+                            <Coins className="h-3 w-3 text-secondary" />
                             {student.coins || 0}
                           </div>
                         </TableCell>
