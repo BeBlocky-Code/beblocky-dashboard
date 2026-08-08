@@ -1,6 +1,6 @@
 import { CourseWorkspaceSkeleton } from "@/components/skeletons";
 
-export default function CourseEditLoading() {
+export default function Loading() {
   return (
     <div className="pt-2">
       <CourseWorkspaceSkeleton />
