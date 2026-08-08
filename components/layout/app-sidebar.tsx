@@ -59,6 +59,11 @@ function SidebarChrome({
   const pathname = usePathname();
   const { theme, toggleTheme } = useThemeContext();
   const { user, isLoading } = useAuth();
+  // Session fetch can resolve on client before hydrate matches SSR — defer
+  // user-specific avatar/label until mount to avoid Avatar hydration mismatches.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const showUser = mounted && !isLoading;
 
   const handleSignOut = async () => {
     try {
@@ -201,23 +206,25 @@ function SidebarChrome({
           )}
         >
           <Avatar className="h-9 w-9 shrink-0 ring-2 ring-primary/20">
-            {isLoading ? (
-              <AvatarFallback className="animate-pulse" />
-            ) : user?.image ? (
+            {showUser && user?.image ? (
               <AvatarImage src={user.image} alt={user.name || "User"} />
-            ) : (
-              <AvatarFallback className="bg-primary/15 text-xs font-semibold text-primary">
-                {user?.name ? getInitials(user.name) : "?"}
-              </AvatarFallback>
-            )}
+            ) : null}
+            <AvatarFallback
+              className={cn(
+                "bg-primary/15 text-xs font-semibold text-primary",
+                !showUser && "animate-pulse"
+              )}
+            >
+              {showUser && user?.name ? getInitials(user.name) : null}
+            </AvatarFallback>
           </Avatar>
           {!collapsed && (
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium">
-                {user?.name || "User"}
+                {showUser ? user?.name || "User" : "\u00a0"}
               </p>
               <p className="truncate text-xs text-muted-foreground">
-                {user?.email || ""}
+                {showUser ? user?.email || "" : "\u00a0"}
               </p>
             </div>
           )}

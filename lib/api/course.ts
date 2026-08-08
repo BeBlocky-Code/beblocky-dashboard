@@ -9,6 +9,16 @@ import { ILesson, ICreateLessonDto } from "@/types/lesson";
 import { ISlide, ICreateSlideDto } from "@/types/slide";
 import { Types } from "mongoose";
 import { formatRelativeTime } from "@/lib/utils";
+import { apiFetch, toRefId, toRefIdList } from "@/lib/api/utils";
+
+function toObjectIdList(values: unknown): Types.ObjectId[] {
+  return toRefIdList(values).map((id) => new Types.ObjectId(id));
+}
+
+function toObjectIdOrNew(value: unknown): Types.ObjectId {
+  const id = toRefId(value);
+  return id ? new Types.ObjectId(id) : new Types.ObjectId();
+}
 
 // Types for the client-side course with additional computed properties
 export interface ClientCourse extends ICourse {
@@ -42,107 +52,43 @@ export async function createCourse(
   courseData: ICreateCourseDto,
   userId: string
 ): Promise<ClientCourse> {
-  try {
-    if (!process.env.NEXT_PUBLIC_API_URL) {
-      throw new Error("API URL is not configured");
-    }
+  const apiPayload: Record<string, unknown> = {
+    courseTitle: courseData.courseTitle,
+    courseDescription: courseData.courseDescription || "",
+    courseLanguage: courseData.courseLanguage,
+    userId,
+    subType: courseData.subType || CourseSubscriptionType.FREE,
+    status: courseData.status || CourseStatus.DRAFT,
+    rating: courseData.rating || 0,
+    language: courseData.language || courseData.courseLanguage,
+  };
 
-    // Build payload according to backend contract
-    const apiPayload: any = {
-      courseTitle: courseData.courseTitle,
-      courseDescription: courseData.courseDescription || "",
-      courseLanguage: courseData.courseLanguage,
-      userId: userId, // String ID from better-auth
-      subType: courseData.subType || CourseSubscriptionType.FREE,
-      status: courseData.status || CourseStatus.DRAFT,
-      rating: courseData.rating || 0,
-      language: courseData.language || courseData.courseLanguage,
-    };
-
-    if (courseData.lessonIds) {
-      apiPayload.lessonIds = courseData.lessonIds.map((id) => id.toString());
-    }
-    if (courseData.slideIds) {
-      apiPayload.slideIds = courseData.slideIds.map((id) => id.toString());
-    }
-    if (courseData.organization) {
-      apiPayload.organization = courseData.organization.map((id) =>
-        id.toString()
-      );
-    }
-
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      credentials: "include",
-      body: JSON.stringify(apiPayload),
-    });
-
-    if (!response.ok) {
-      let errorData = null;
-      try {
-        errorData = await response.json();
-      } catch {}
-
-      // If the API is not available, return a mock created course
-      console.warn("Course API not available, returning mock created course");
-      return {
-        _id: "mock-course-id",
-        courseTitle: courseData.courseTitle,
-        courseDescription: courseData.courseDescription || "",
-        courseLanguage: courseData.courseLanguage,
-        slides: courseData.slideIds || [],
-        lessons: courseData.lessonIds || [],
-        students: [],
-        organization: courseData.organization || [],
-        subType: courseData.subType || CourseSubscriptionType.FREE,
-        status: courseData.status || CourseStatus.DRAFT,
-        rating: courseData.rating || 0,
-        language: courseData.language || courseData.courseLanguage,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-    }
-
-    const newCourse = await response.json();
-
-    // Transform the response to match our interface
-    return {
-      ...newCourse,
-      _id: newCourse._id,
-      school: newCourse.school
-        ? new Types.ObjectId(newCourse.school)
-        : new Types.ObjectId(),
-      slides: newCourse.slides?.map((id: any) => new Types.ObjectId(id)) || [],
-      lessons:
-        newCourse.lessons?.map((id: any) => new Types.ObjectId(id)) || [],
-      students:
-        newCourse.students?.map((id: any) => new Types.ObjectId(id)) || [],
-      organization:
-        newCourse.organization?.map((id: any) => new Types.ObjectId(id)) || [],
-    };
-  } catch (error) {
-    console.warn("Course API error, returning mock created course:", error);
-    // Return a mock created course if the API fails
-    return {
-      _id: "mock-course-id",
-      courseTitle: courseData.courseTitle,
-      courseDescription: courseData.courseDescription || "",
-      courseLanguage: courseData.courseLanguage,
-      slides: courseData.slideIds || [],
-      lessons: courseData.lessonIds || [],
-      students: [],
-      organization: courseData.organization || [],
-      subType: courseData.subType || CourseSubscriptionType.FREE,
-      status: courseData.status || CourseStatus.DRAFT,
-      rating: courseData.rating || 0,
-      language: courseData.language || courseData.courseLanguage,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
+  if (courseData.lessonIds) {
+    apiPayload.lessonIds = courseData.lessonIds.map((id) => id.toString());
   }
+  if (courseData.slideIds) {
+    apiPayload.slideIds = courseData.slideIds.map((id) => id.toString());
+  }
+  if (courseData.organization) {
+    apiPayload.organization = courseData.organization.map((id) =>
+      id.toString(),
+    );
+  }
+
+  const newCourse = await apiFetch<any>("/courses", {
+    method: "POST",
+    body: JSON.stringify(apiPayload),
+  });
+
+  return {
+    ...newCourse,
+    _id: newCourse._id,
+    school: toObjectIdOrNew(newCourse.school),
+    slides: toObjectIdList(newCourse.slides),
+    lessons: toObjectIdList(newCourse.lessons),
+    students: toObjectIdList(newCourse.students),
+    organization: toObjectIdList(newCourse.organization),
+  };
 }
 
 /**
@@ -153,117 +99,47 @@ export async function updateCourse(
   updatedCourse: IUpdateCourseDto,
   userId?: string
 ): Promise<ClientCourse> {
-  try {
-    if (!process.env.NEXT_PUBLIC_API_URL) {
-      throw new Error("API URL is not configured");
-    }
+  const apiPayload: Record<string, unknown> = {};
 
-    // Build payload according to backend contract
-    const apiPayload: any = {};
+  if (updatedCourse.courseTitle)
+    apiPayload.courseTitle = updatedCourse.courseTitle;
+  if (updatedCourse.courseDescription)
+    apiPayload.courseDescription = updatedCourse.courseDescription;
+  if (updatedCourse.courseLanguage)
+    apiPayload.courseLanguage = updatedCourse.courseLanguage;
+  if (updatedCourse.subType) apiPayload.subType = updatedCourse.subType;
+  if (updatedCourse.status) apiPayload.status = updatedCourse.status;
+  if (updatedCourse.rating !== undefined)
+    apiPayload.rating = updatedCourse.rating;
+  if (updatedCourse.language) apiPayload.language = updatedCourse.language;
+  if (userId) apiPayload.userId = userId;
 
-    if (updatedCourse.courseTitle)
-      apiPayload.courseTitle = updatedCourse.courseTitle;
-    if (updatedCourse.courseDescription)
-      apiPayload.courseDescription = updatedCourse.courseDescription;
-    if (updatedCourse.courseLanguage)
-      apiPayload.courseLanguage = updatedCourse.courseLanguage;
-    if (updatedCourse.subType) apiPayload.subType = updatedCourse.subType;
-    if (updatedCourse.status) apiPayload.status = updatedCourse.status;
-    if (updatedCourse.rating !== undefined)
-      apiPayload.rating = updatedCourse.rating;
-    if (updatedCourse.language) apiPayload.language = updatedCourse.language;
-    if (userId) apiPayload.userId = userId; // String ID from better-auth
-
-    if (updatedCourse.lessonIds) {
-      apiPayload.lessonIds = updatedCourse.lessonIds.map((id) => id.toString());
-    }
-    if (updatedCourse.slideIds) {
-      apiPayload.slideIds = updatedCourse.slideIds.map((id) => id.toString());
-    }
-    if (updatedCourse.organization) {
-      apiPayload.organization = updatedCourse.organization.map((id) =>
-        id.toString()
-      );
-    }
-
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/courses/${courseId}`,
-      {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify(apiPayload),
-      }
-    );
-
-    if (!response.ok) {
-      let errorData = null;
-      try {
-        errorData = await response.json();
-      } catch {}
-
-      // If the API is not available, return a mock updated course
-      console.warn("Course API not available, returning mock updated course");
-      return {
-        _id: courseId,
-        courseTitle: updatedCourse.courseTitle || "Updated Course",
-        courseDescription: updatedCourse.courseDescription || "",
-        courseLanguage: updatedCourse.courseLanguage || "English",
-        slides: updatedCourse.slideIds || [],
-        lessons: updatedCourse.lessonIds || [],
-        students: [],
-        organization: updatedCourse.organization || [],
-        subType: updatedCourse.subType || CourseSubscriptionType.FREE,
-        status: updatedCourse.status || CourseStatus.DRAFT,
-        rating: updatedCourse.rating || 0,
-        language:
-          updatedCourse.language || updatedCourse.courseLanguage || "English",
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-    }
-
-    const updatedData = await response.json();
-
-    return {
-      ...updatedData,
-      _id: updatedData._id,
-      school: updatedData.school
-        ? new Types.ObjectId(updatedData.school)
-        : new Types.ObjectId(),
-      slides:
-        updatedData.slides?.map((id: any) => new Types.ObjectId(id)) || [],
-      lessons:
-        updatedData.lessons?.map((id: any) => new Types.ObjectId(id)) || [],
-      students:
-        updatedData.students?.map((id: any) => new Types.ObjectId(id)) || [],
-      organization:
-        updatedData.organization?.map((id: any) => new Types.ObjectId(id)) ||
-        [],
-    };
-  } catch (error) {
-    console.warn("Course API error, returning mock updated course:", error);
-    // Return a mock updated course if the API fails
-    return {
-      _id: courseId,
-      courseTitle: updatedCourse.courseTitle || "Updated Course",
-      courseDescription: updatedCourse.courseDescription || "",
-      courseLanguage: updatedCourse.courseLanguage || "English",
-      slides: updatedCourse.slideIds || [],
-      lessons: updatedCourse.lessonIds || [],
-      students: [],
-      organization: updatedCourse.organization || [],
-      subType: updatedCourse.subType || CourseSubscriptionType.FREE,
-      status: updatedCourse.status || CourseStatus.DRAFT,
-      rating: updatedCourse.rating || 0,
-      language:
-        updatedCourse.language || updatedCourse.courseLanguage || "English",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
+  if (updatedCourse.lessonIds) {
+    apiPayload.lessonIds = updatedCourse.lessonIds.map((id) => id.toString());
   }
+  if (updatedCourse.slideIds) {
+    apiPayload.slideIds = updatedCourse.slideIds.map((id) => id.toString());
+  }
+  if (updatedCourse.organization) {
+    apiPayload.organization = updatedCourse.organization.map((id) =>
+      id.toString(),
+    );
+  }
+
+  const updatedData = await apiFetch<any>(`/courses/${courseId}`, {
+    method: "PUT",
+    body: JSON.stringify(apiPayload),
+  });
+
+  return {
+    ...updatedData,
+    _id: updatedData._id,
+    school: toObjectIdOrNew(updatedData.school),
+    slides: toObjectIdList(updatedData.slides),
+    lessons: toObjectIdList(updatedData.lessons),
+    students: toObjectIdList(updatedData.students),
+    organization: toObjectIdList(updatedData.organization),
+  };
 }
 
 /**
@@ -308,46 +184,24 @@ export function convertFromModernCourse(
  * Fetch course details by ID
  */
 export async function fetchCourse(courseId: string): Promise<ClientCourse> {
-  if (!process.env.NEXT_PUBLIC_API_URL) {
-    throw new Error("API URL is not configured");
-  }
+  const courseData = await apiFetch<any>(`/courses/${courseId}`);
 
-  const response = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL}/courses/${courseId}`,
-    {
-      credentials: "include",
-    }
-  );
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch course");
-  }
-
-  const courseData = await response.json();
-
-  // Transform the API response to match our interface
   try {
+    const slides = toObjectIdList(courseData.slides);
+    const lessons = toObjectIdList(courseData.lessons);
+    const students = toObjectIdList(courseData.students);
     return {
       ...courseData,
       _id: courseData._id,
-      school:
-        courseData.school && courseData.school.toString().length === 24
-          ? new Types.ObjectId(courseData.school.toString())
-          : new Types.ObjectId(),
-      slides:
-        courseData.slides
-          ?.filter((id: any) => id && id.toString().length === 24)
-          ?.map((id: any) => new Types.ObjectId(id.toString())) || [],
-      lessons:
-        courseData.lessons
-          ?.filter((id: any) => id && id.toString().length === 24)
-          ?.map((id: any) => new Types.ObjectId(id.toString())) || [],
-      students:
-        courseData.students
-          ?.filter((id: any) => id && id.toString().length === 24)
-          ?.map((id: any) => new Types.ObjectId(id.toString())) || [],
+      school: toObjectIdOrNew(courseData.school),
+      slides,
+      lessons,
+      students,
+      lessonsCount: lessons.length,
+      slidesCount: slides.length,
+      studentsCount: students.length || courseData.students?.length || 0,
       lastUpdated: formatRelativeTime(
-        courseData.updatedAt || courseData.createdAt
+        courseData.updatedAt || courseData.createdAt,
       ),
     };
   } catch (error) {
@@ -360,48 +214,18 @@ export async function fetchCourse(courseId: string): Promise<ClientCourse> {
  * Fetch lessons for a course
  */
 export async function fetchLessonsForCourse(
-  courseId: string
+  courseId: string,
 ): Promise<ILesson[]> {
-  if (!process.env.NEXT_PUBLIC_API_URL) {
-    throw new Error("API URL is not configured");
-  }
-
-  const response = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL}/lessons?courseId=${courseId}`,
-    {
-      credentials: "include",
-    }
-  );
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch lessons");
-  }
-
-  return await response.json();
+  return apiFetch<ILesson[]>(`/lessons?courseId=${courseId}`);
 }
 
 /**
  * Fetch slides for a course
  */
 export async function fetchSlidesForCourse(
-  courseId: string
+  courseId: string,
 ): Promise<ISlide[]> {
-  if (!process.env.NEXT_PUBLIC_API_URL) {
-    throw new Error("API URL is not configured");
-  }
-
-  const response = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL}/slides?courseId=${courseId}`,
-    {
-      credentials: "include",
-    }
-  );
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch slides");
-  }
-
-  return await response.json();
+  return apiFetch<ISlide[]>(`/slides?courseId=${courseId}`);
 }
 
 /**
@@ -434,38 +258,16 @@ export async function updateLesson(
         errorData = await response.json();
       } catch {}
 
-      // If the API is not available, return a mock updated lesson
-      console.warn("Course API not available, returning mock updated lesson");
-      return {
-        _id: lessonId,
-        title: updatedData.title || "Updated Lesson",
-        description: updatedData.description || "",
-        courseId: updatedData.courseId || new Types.ObjectId(),
-        slides: updatedData.slides || [],
-        difficulty: updatedData.difficulty || ("Beginner" as any),
-        duration: updatedData.duration || 30,
-        tags: updatedData.tags || [],
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+      throw new Error(
+        errorData?.message ||
+          `Failed to update lesson: ${response.status} ${response.statusText}`,
+      );
     }
 
     return await response.json();
   } catch (error) {
-    console.warn("Course API error, returning mock updated lesson:", error);
-    // Return a mock updated lesson if the API fails
-    return {
-      _id: lessonId,
-      title: updatedData.title || "Updated Lesson",
-      description: updatedData.description || "",
-      courseId: updatedData.courseId || new Types.ObjectId(),
-      slides: updatedData.slides || [],
-      difficulty: updatedData.difficulty || ("Beginner" as any),
-      duration: updatedData.duration || 30,
-      tags: updatedData.tags || [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
+    console.error("Course API error updating lesson:", error);
+    throw error;
   }
 }
 
@@ -487,19 +289,19 @@ export async function deleteLesson(lessonId: string): Promise<void> {
     );
 
     if (!response.ok) {
-      let errorData = null;
+      let errorData: any = null;
       try {
         errorData = await response.json();
       } catch {}
 
-      // If the API is not available, just log a warning and continue
-      console.warn("Course API not available, skipping lesson deletion");
-      return;
+      throw new Error(
+        errorData?.message ||
+          `Failed to delete lesson: ${response.status} ${response.statusText}`,
+      );
     }
   } catch (error) {
-    console.warn("Course API error, skipping lesson deletion:", error);
-    // Just log the error and continue if the API fails
-    return;
+    console.error("Course API error deleting lesson:", error);
+    throw error;
   }
 }
 
@@ -560,56 +362,19 @@ export async function createSlide(
   // Add slide data as JSON string
   formData.append("data", JSON.stringify(apiPayload));
 
-  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/slides`, {
+  const newSlide = await apiFetch<ISlide>("/slides", {
     method: "POST",
     body: formData,
-    credentials: "include",
   });
 
-  if (!response.ok) {
-    let errorData = null;
-    try {
-      const errorText = await response.text();
-      errorData = errorText ? JSON.parse(errorText) : null;
-    } catch (parseError) {
-      // fallback
-    }
-    throw new Error(
-      errorData?.message ||
-        `Failed to create slide: ${response.status} ${response.statusText}`
-    );
-  }
-
-  const newSlide = await response.json();
-
-  // Update course and lesson slides array in backend
-  try {
-    await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/courses/${slideData.courseId}`,
-      {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ $push: { slides: newSlide._id } }),
-      }
-    );
-    if (slideData.lessonId) {
-      await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/lessons/${slideData.lessonId}`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ $push: { slides: newSlide._id } }),
-        }
-      );
-    }
-  } catch (err) {
-    console.error(
-      "Failed to update course/lesson slides array after slide creation",
-      err
-    );
-  }
+  // Lesson.slides is updated by the API on create. Course.slides is not —
+  // link it here and fail loudly so counts/refs don't drift silently.
+  const courseId = String(slideData.courseId);
+  const slideId = String(newSlide._id);
+  await apiFetch(`/courses/${courseId}`, {
+    method: "PUT",
+    body: JSON.stringify({ $addToSet: { slides: slideId } }),
+  });
 
   return newSlide;
 }
@@ -621,8 +386,8 @@ export async function updateSlide(
   slideId: string,
   updatedData: Partial<ISlide>,
   imageFiles?: File[],
-  prevLessonId?: string,
-  newLessonId?: string
+  _prevLessonId?: string,
+  _newLessonId?: string
 ): Promise<ISlide> {
   if (!process.env.NEXT_PUBLIC_API_URL) {
     throw new Error("API URL is not configured");
@@ -652,69 +417,25 @@ export async function updateSlide(
   // Add slide data as JSON string
   formData.append("data", JSON.stringify(slideDataToSend));
 
-  const response = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL}/slides/${slideId}`,
-    {
-      method: "PATCH",
-      body: formData,
-      credentials: "include",
-    }
-  );
+  const updatedSlide = await apiFetch<ISlide>(`/slides/${slideId}`, {
+    method: "PATCH",
+    body: formData,
+  });
 
-  if (!response.ok) {
-    let errorData = null;
-    try {
-      errorData = await response.json();
-    } catch {}
-    throw new Error(
-      errorData?.message ||
-        `Failed to update slide: ${response.status} ${response.statusText}`
-    );
-  }
-
-  const updatedSlide = await response.json();
-
-  // Ensure the lesson's slides array is updated to include this slide
-  if (prevLessonId && newLessonId && prevLessonId !== newLessonId) {
-    try {
-      // Add to new lesson
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/lessons/${newLessonId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ $addToSet: { slides: updatedSlide._id } }),
-      });
-      // Remove from previous lesson
-      await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/lessons/${prevLessonId}`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ $pull: { slides: updatedSlide._id } }),
-        }
-      );
-    } catch (err) {
-      console.error(
-        "Failed to update lesson slides array after slide update",
-        err
-      );
-    }
-  } else if (newLessonId) {
-    // If only newLessonId is present (e.g., slide was not previously assigned), just add
-    try {
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/lessons/${newLessonId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ $addToSet: { slides: updatedSlide._id } }),
-      });
-    } catch (err) {
-      console.error(
-        "Failed to add slide to new lesson after slide update",
-        err
-      );
-    }
+  // Lesson slide membership is maintained by the API on update.
+  // Keep course.slides in sync when a slide is assigned/moved.
+  const courseId =
+    toRefId((updatedData as any).courseId) ||
+    toRefId((updatedData as any).course) ||
+    toRefId((updatedSlide as any).courseId) ||
+    toRefId((updatedSlide as any).course);
+  if (courseId && updatedSlide._id) {
+    await apiFetch(`/courses/${courseId}`, {
+      method: "PUT",
+      body: JSON.stringify({
+        $addToSet: { slides: String(updatedSlide._id) },
+      }),
+    });
   }
 
   return updatedSlide;
@@ -775,19 +496,19 @@ export async function deleteSlide(slideId: string): Promise<void> {
     );
 
     if (!response.ok) {
-      let errorData = null;
+      let errorData: any = null;
       try {
         errorData = await response.json();
       } catch {}
 
-      // If the API is not available, just log a warning and continue
-      console.warn("Course API not available, skipping slide deletion");
-      return;
+      throw new Error(
+        errorData?.message ||
+          `Failed to delete slide: ${response.status} ${response.statusText}`,
+      );
     }
   } catch (error) {
-    console.warn("Course API error, skipping slide deletion:", error);
-    // Just log the error and continue if the API fails
-    return;
+    console.error("Course API error deleting slide:", error);
+    throw error;
   }
 }
 
@@ -833,63 +554,30 @@ export async function createLesson(
     });
 
     if (!response.ok) {
-      let errorData = null;
+      let errorData: any = null;
       try {
         errorData = await response.json();
       } catch {}
-
-      // If the API is not available, return a mock created lesson
-      console.warn("Course API not available, returning mock created lesson");
-      return {
-        _id: "mock-lesson-id",
-        title: lessonData.title,
-        description: lessonData.description || "",
-        courseId: lessonData.courseId,
-        slides: lessonData.slides || [],
-        difficulty: lessonData.difficulty || ("Beginner" as any),
-        duration: lessonData.duration,
-        tags: lessonData.tags || [],
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+      throw new Error(
+        errorData?.message ||
+          `Failed to create lesson: ${response.status} ${response.statusText}`,
+      );
     }
 
     const newLesson = await response.json();
 
-    // Update course lessons array in backend
-    try {
-      await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/courses/${lessonData.courseId}`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ $push: { lessons: newLesson._id } }),
-        }
-      );
-    } catch (err) {
-      console.error(
-        "Failed to update course lessons array after lesson creation",
-        err
-      );
-    }
+    // Keep course.lessons in sync — API create does not do this.
+    await apiFetch(`/courses/${lessonData.courseId}`, {
+      method: "PUT",
+      body: JSON.stringify({
+        $addToSet: { lessons: String(newLesson._id) },
+      }),
+    });
 
     return newLesson;
   } catch (error) {
-    console.warn("Course API error, returning mock created lesson:", error);
-    // Return a mock created lesson if the API fails
-    return {
-      _id: "mock-lesson-id",
-      title: lessonData.title,
-      description: lessonData.description || "",
-      courseId: lessonData.courseId,
-      slides: lessonData.slides || [],
-      difficulty: lessonData.difficulty || ("Beginner" as any),
-      duration: lessonData.duration,
-      tags: lessonData.tags || [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
+    console.error("Course API error creating lesson:", error);
+    throw error;
   }
 }
 
@@ -932,53 +620,24 @@ export async function fetchCompleteCourseData(courseId: string): Promise<{
  * Fetch all courses with their details (lessons, slides, students count)
  */
 export async function fetchAllCoursesWithDetails(): Promise<ClientCourse[]> {
-  if (!process.env.NEXT_PUBLIC_API_URL) {
-    throw new Error("API URL is not configured");
-  }
+  const coursesData = await apiFetch<any[]>("/courses");
 
-  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses`, {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    credentials: "include",
-  });
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch courses");
-  }
-
-  const coursesData = await response.json();
-
-  // Counts come from id arrays already on the course — no per-course
-  // lessons/slides round-trips (was 1 + 2N).
+  // Counts from lesson/slide refs (string ids OR populated docs).
   return coursesData.map((course: any) => {
-    const slides =
-      course.slides
-        ?.filter((id: any) => id && id.toString().length === 24)
-        ?.map((id: any) => new Types.ObjectId(id.toString())) || [];
-    const lessons =
-      course.lessons
-        ?.filter((id: any) => id && id.toString().length === 24)
-        ?.map((id: any) => new Types.ObjectId(id.toString())) || [];
-    const students =
-      course.students
-        ?.filter((id: any) => id && id.toString().length === 24)
-        ?.map((id: any) => new Types.ObjectId(id.toString())) || [];
+    const slides = toObjectIdList(course.slides);
+    const lessons = toObjectIdList(course.lessons);
+    const students = toObjectIdList(course.students);
 
     return {
       ...course,
       _id: course._id,
-      school:
-        course.school && course.school.toString().length === 24
-          ? new Types.ObjectId(course.school.toString())
-          : new Types.ObjectId(),
+      school: toObjectIdOrNew(course.school),
       slides,
       lessons,
       students,
       lessonsCount: lessons.length,
       slidesCount: slides.length,
-      studentsCount: course.students?.length || 0,
+      studentsCount: students.length || course.students?.length || 0,
       lastUpdated: formatRelativeTime(course.updatedAt || course.createdAt),
     } as ClientCourse;
   });
@@ -988,30 +647,7 @@ export async function fetchAllCoursesWithDetails(): Promise<ClientCourse[]> {
  * Delete a course
  */
 export async function deleteCourse(courseId: string): Promise<void> {
-  try {
-    if (!process.env.NEXT_PUBLIC_API_URL) {
-      throw new Error("API URL is not configured");
-    }
-
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/courses/${courseId}`,
-      {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-      }
-    );
-
-    if (!response.ok) {
-      // If the API is not available, just log a warning and continue
-      console.warn("Course API not available, skipping course deletion");
-      return;
-    }
-  } catch (error) {
-    console.warn("Course API error, skipping course deletion:", error);
-    // Just log the error and continue if the API fails
-    return;
-  }
+  await apiFetch<void>(`/courses/${courseId}`, {
+    method: "DELETE",
+  });
 }

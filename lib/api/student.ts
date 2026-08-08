@@ -9,109 +9,66 @@ const getApiUrl = (endpoint: string) => {
   return `${process.env.NEXT_PUBLIC_API_URL}${endpoint}`;
 };
 
-function fallbackStudent(userId: string, user?: IUser | null): IStudent {
-  return {
-    _id: userId,
-    userId,
-    dateOfBirth: new Date(),
-    grade: 1,
-    gender: "other" as any,
-    enrolledCourses: [],
-    coins: 0,
-    codingStreak: 0,
-    lastCodingActivity: new Date(),
-    totalCoinsEarned: 0,
-    totalTimeSpent: 0,
-    goals: [],
-    subscription: "free",
-    section: "A",
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    name: user?.name,
-    email: user?.email,
-    displayName: user?.name || user?.email,
-  };
+async function parseError(response: Response): Promise<string> {
+  const errorText = await response.text();
+  try {
+    const errorData = JSON.parse(errorText);
+    return errorData.message || errorText || response.statusText;
+  } catch {
+    return errorText || response.statusText;
+  }
 }
 
 export const studentApi = {
-  async getStudentByEmail(email: string, user: IUser): Promise<IStudent> {
-    try {
-      const headers = await getApiAuthHeaders();
-      const response = await fetch(
-        getApiUrl(`/students/email/${encodeURIComponent(email)}`),
-        {
-          headers,
-          credentials: "include",
-        }
-      );
-
-      if (!response.ok) {
-        console.warn(
-          "Student API not available, creating default student object for email"
-        );
-        return fallbackStudent(email, user);
-      }
-
-      return response.json();
-    } catch (error) {
-      console.warn(
-        "Student API error, creating default student object for email:",
-        error
-      );
-      return fallbackStudent(email, user);
-    }
-  },
-
-  async getStudentByUserId(userId: string, user: IUser): Promise<IStudent> {
-    try {
-      const headers = await getApiAuthHeaders();
-      const response = await fetch(getApiUrl(`/students/user/${userId}`), {
+  async getStudentByEmail(email: string, _user: IUser): Promise<IStudent> {
+    const headers = await getApiAuthHeaders();
+    const response = await fetch(
+      getApiUrl(`/students/email/${encodeURIComponent(email)}`),
+      {
         headers,
         credentials: "include",
-      });
+      },
+    );
 
-      if (!response.ok) {
-        console.warn(
-          "Student API not available, creating default student object"
-        );
-        return fallbackStudent(userId, user);
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new Error("Student not found");
       }
-
-      return response.json();
-    } catch (error) {
-      console.warn(
-        "Student API error, creating default student object:",
-        error
+      throw new Error(
+        (await parseError(response)) ||
+          `Failed to get student by email: ${response.status}`,
       );
-      return fallbackStudent(userId, user);
     }
+
+    return response.json();
+  },
+
+  async getStudentByUserId(userId: string, _user: IUser): Promise<IStudent> {
+    const headers = await getApiAuthHeaders();
+    const response = await fetch(getApiUrl(`/students/user/${userId}`), {
+      headers,
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new Error("Student not found");
+      }
+      throw new Error(
+        (await parseError(response)) ||
+          `Failed to get student: ${response.status}`,
+      );
+    }
+
+    return response.json();
   },
 
   async getCurrentStudent(user: IUser): Promise<IStudent> {
     const userId = user._id || user.email;
-    try {
-      const headers = await getApiAuthHeaders();
-      // Resolve via userId — /students/me is not a Nest route.
-      const response = await fetch(getApiUrl(`/students/user/${userId}`), {
-        headers,
-        credentials: "include",
-      });
-
-      if (!response.ok) {
-        console.warn(
-          "Student API not available, creating default student object"
-        );
-        return fallbackStudent(userId, user);
-      }
-
-      return response.json();
-    } catch (error) {
-      console.warn(
-        "Student API error, creating default student object:",
-        error
-      );
-      return fallbackStudent(userId, user);
+    if (!userId) {
+      throw new Error("User id is required to load student profile");
     }
+    return this.getStudentByUserId(String(userId), user);
   },
 
   /**

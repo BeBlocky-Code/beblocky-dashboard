@@ -1,8 +1,7 @@
 import type { IAdmin } from "@/types/admin";
 import type { IUser } from "@/types/user";
-import { Types } from "mongoose";
+import { getApiAuthHeaders } from "@/lib/auth-client";
 
-// Use the standard API URL pattern like other APIs
 const getApiUrl = (endpoint: string) => {
   if (!process.env.NEXT_PUBLIC_API_URL) {
     throw new Error("API URL is not configured");
@@ -10,86 +9,52 @@ const getApiUrl = (endpoint: string) => {
   return `${process.env.NEXT_PUBLIC_API_URL}${endpoint}`;
 };
 
-// Helper function to get auth headers from user data
-const getAuthHeaders = (user: IUser) => {
+async function adminAuthHeaders(user: IUser) {
+  const auth = await getApiAuthHeaders();
   return {
-    "x-user-id": user._id || user.email,
+    ...auth,
+    "x-user-id": user._id || user.email || "",
     "x-user-type": user.role || "admin",
   };
-};
+}
+
+async function parseError(response: Response): Promise<string> {
+  const errorText = await response.text();
+  try {
+    const errorData = JSON.parse(errorText);
+    return errorData.message || errorText || response.statusText;
+  } catch {
+    return errorText || response.statusText;
+  }
+}
 
 export const adminApi = {
-  // Get admin by user ID using the new route pattern
   async getAdminByUserId(userId: string, user: IUser): Promise<IAdmin> {
-    try {
-      const authHeaders = getAuthHeaders(user);
-      const response = await fetch(getApiUrl(`/admin/user/${userId}`), {
-        headers: authHeaders,
-        credentials: "include",
-      });
+    const authHeaders = await adminAuthHeaders(user);
+    const response = await fetch(getApiUrl(`/admins/user/${userId}`), {
+      headers: authHeaders,
+      credentials: "include",
+    });
 
-      if (!response.ok) {
-        // If the API is not available, create a default admin object
-        console.warn("Admin API not available, creating default admin object");
-        return {
-          _id: userId,
-          userId: userId,
-          permissions: ["read", "write", "delete"],
-          organizationId: new Types.ObjectId(),
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        };
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new Error("Admin not found");
       }
-
-      return response.json();
-    } catch (error) {
-      console.warn("Admin API error, creating default admin object:", error);
-      // Return a default admin object if the API fails
-      return {
-        _id: userId,
-        userId: userId,
-        permissions: ["read", "write", "delete"],
-        organizationId: new Types.ObjectId(),
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+      throw new Error(
+        (await parseError(response)) ||
+          `Failed to get admin: ${response.status}`,
+      );
     }
+
+    return response.json();
   },
 
-  // Get current admin profile
   async getCurrentAdmin(user: IUser): Promise<IAdmin> {
-    try {
-      const authHeaders = getAuthHeaders(user);
-      const response = await fetch(getApiUrl("/admin/me"), {
-        headers: authHeaders,
-        credentials: "include",
-      });
-
-      if (!response.ok) {
-        // If the API is not available, create a default admin object
-        console.warn("Admin API not available, creating default admin object");
-        return {
-          _id: user._id || "default",
-          userId: user._id || user.email,
-          permissions: ["read", "write", "delete"],
-          organizationId: new Types.ObjectId(),
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        };
-      }
-
-      return response.json();
-    } catch (error) {
-      console.warn("Admin API error, creating default admin object:", error);
-      // Return a default admin object if the API fails
-      return {
-        _id: user._id || "default",
-        userId: user._id || user.email,
-        permissions: ["read", "write", "delete"],
-        organizationId: new Types.ObjectId(),
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+    const userId = user._id || user.email;
+    if (!userId) {
+      throw new Error("User id is required to load admin profile");
     }
+    // Prefer the user-scoped route — /admin/me is not a Nest route.
+    return this.getAdminByUserId(String(userId), user);
   },
 };
