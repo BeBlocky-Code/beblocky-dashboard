@@ -47,6 +47,7 @@ import {
   IncompleteProfileNotice,
   type IncompleteProfileStudent,
 } from "@/components/admin/incomplete-profile-notice";
+import { AdminStudentsSkeleton } from "@/components/skeletons";
 
 interface StudentRow extends IStudent {
   displayName: string;
@@ -342,20 +343,7 @@ export default function AdminStudentsPage() {
   }, [filteredStudents]);
 
   if (session.isPending || isStudentsLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted">
-        <div className="container mx-auto px-6 py-8">
-          <div className="flex min-h-[50vh] items-center justify-center">
-            <div className="flex items-center gap-3 rounded-2xl border border-border/40 bg-card/40 px-5 py-4 shadow-sm backdrop-blur-sm">
-              <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary/30 border-t-primary" />
-              <span className="text-sm text-muted-foreground">
-                Loading students…
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+    return <AdminStudentsSkeleton />;
   }
 
   if (isStudentsError) {

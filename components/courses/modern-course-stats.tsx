@@ -23,7 +23,8 @@ export function ModernCourseStats() {
     coursesLoading || studentsLoading || progressLoading || certsLoading;
 
   const stats = useMemo(() => {
-    const averageCompletion =
+    // Mean of each enrollment's progress % (completionPercentage on progress docs).
+    const averageProgress =
       progress.length > 0
         ? Math.round(
             progress.reduce(
@@ -36,7 +37,7 @@ export function ModernCourseStats() {
     return {
       totalCourses: courses.length,
       activeStudents: students.length,
-      averageCompletion,
+      averageProgress,
       certifications: certStats?.total ?? 0,
     };
   }, [courses, students, progress, certStats]);
@@ -60,8 +61,8 @@ export function ModernCourseStats() {
         isLoading={isLoading}
       />
       <ModernStatCard
-        title="Average Completion"
-        value={isLoading ? "…" : `${stats.averageCompletion}%`}
+        title="Average Progress"
+        value={isLoading ? "…" : `${stats.averageProgress}%`}
         icon={Clock}
         iconClass="text-primary bg-muted/40"
         delay={0.1}

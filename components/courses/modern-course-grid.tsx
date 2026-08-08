@@ -297,7 +297,6 @@ function ModernCourseCard({ course, onDelete }: ModernCourseCardProps) {
         isPending && "pointer-events-none opacity-70"
       )}
       onClick={handleEdit}
-      onMouseEnter={prefetchCourse}
       onFocus={prefetchCourse}
       aria-busy={isPending}
     >

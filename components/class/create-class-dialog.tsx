@@ -48,13 +48,17 @@ import {
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import type { ICreateClassDto } from "@/types/class";
-import { fetchAllCoursesWithDetails } from "@/lib/api/course";
 import type { ClientCourse } from "@/lib/api/course";
 import { useSession } from "@/lib/auth-client";
-import { userApi } from "@/lib/api/user";
 import { classApi } from "@/lib/api/class";
-import { teacherApi } from "@/lib/api/teacher";
+import {
+  useCoursesWithDetails,
+  useTeacherByUserId,
+  useUserByEmail,
+} from "@/lib/hooks/queries";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 
 const createClassSchema = z
   .object({
@@ -92,12 +96,32 @@ export function ModernCreateClassDialog({
   onSubmit,
 }: ModernCreateClassDialogProps) {
   const session = useSession();
+  const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
-  const [courses, setCourses] = useState<ClientCourse[]>([]);
-  const [isLoadingCourses, setIsLoadingCourses] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [creationProgress, setCreationProgress] = useState<string>("");
+
+  const email = session.data?.user?.email;
+  const { data: userData } = useUserByEmail(email, {
+    enabled: open && !session.isPending && !!email,
+  });
+  const { data: teacherData } = useTeacherByUserId(
+    session.data?.user?.id ?? userData?._id,
+    userData ?? null,
+    { enabled: open && !!userData }
+  );
+  const {
+    data: courses = [],
+    isLoading: isLoadingCourses,
+    isError: coursesError,
+  } = useCoursesWithDetails();
+
+  useEffect(() => {
+    if (coursesError) {
+      setValidationError("Failed to load courses. Please try again.");
+    }
+  }, [coursesError]);
 
   const form = useForm<CreateClassFormData>({
     resolver: zodResolver(createClassSchema),
@@ -182,12 +206,7 @@ export function ModernCreateClassDialog({
     },
   ];
 
-  // Load courses when dialog opens and session is available
-  useEffect(() => {
-    if (open && session.data?.user?.email) {
-      loadCourses();
-    }
-  }, [open, !!session.data?.user?.email]);
+  // Courses come from useCoursesWithDetails (shared cache).
 
   // Reset validation error when step changes
   useEffect(() => {
@@ -197,38 +216,11 @@ export function ModernCreateClassDialog({
   // Reset form and state when dialog opens
   useEffect(() => {
     if (open) {
-      console.log("Dialog opened, resetting state");
       setCurrentStep(0);
       setValidationError(null);
       form.reset();
     }
   }, [open, form]);
-
-  const loadCourses = async () => {
-    if (!session.data?.user?.email) {
-      console.log("No user session available for loading courses");
-      return;
-    }
-
-    setIsLoadingCourses(true);
-    setValidationError(null);
-
-    try {
-      // Get user data first for authentication
-      const userData = await userApi.getUserByEmail(session.data.user.email);
-      console.log("User data for course loading:", userData);
-
-      const coursesData = await fetchAllCoursesWithDetails();
-      console.log("Loaded courses:", coursesData);
-      setCourses(coursesData);
-    } catch (error) {
-      console.error("Failed to load courses:", error);
-      setValidationError("Failed to load courses. Please try again.");
-      // Don't throw the error, just log it so the dialog doesn't close
-    } finally {
-      setIsLoadingCourses(false);
-    }
-  };
 
   const handleSubmit = async (data: CreateClassFormData) => {
     setIsLoading(true);
@@ -236,7 +228,6 @@ export function ModernCreateClassDialog({
     setCreationProgress("");
 
     try {
-      console.log("Starting class creation process...");
       setCreationProgress("Preparing class data...");
       toast.info("Creating your class...", {
         description: "Please wait while we set up your class.",
@@ -257,21 +248,14 @@ export function ModernCreateClassDialog({
         },
       };
 
-      console.log("Class data prepared:", createData);
-
-      // Get user data for authentication
-      if (!session.data?.user?.email) {
+      if (!session.data?.user?.email || !userData) {
         throw new Error("User session not available");
       }
 
-      setCreationProgress("Authenticating user...");
-      const userData = await userApi.getUserByEmail(session.data.user.email);
-      console.log("User data retrieved for class creation");
-
-      // Get teacher data to include organization ID
       setCreationProgress("Getting organization details...");
-      const teacherData = await teacherApi.getCurrentTeacher(userData);
-      console.log("Teacher data retrieved:", teacherData);
+      if (!teacherData) {
+        throw new Error("Teacher profile not available");
+      }
 
       // Add organization ID to the class data
       const createDataWithOrg: ICreateClassDto = {
@@ -285,6 +269,7 @@ export function ModernCreateClassDialog({
       console.log("Class created successfully:", newClass);
 
       setCreationProgress("Finalizing setup...");
+      void queryClient.invalidateQueries({ queryKey: queryKeys.classes.all });
 
       // Show success toast
       toast.success("Class created successfully!", {
@@ -292,7 +277,7 @@ export function ModernCreateClassDialog({
       });
 
       // Call the parent's onSubmit callback to update the UI
-      await onSubmit(createData);
+      await onSubmit(createDataWithOrg);
 
       // Reset form and close dialog
       form.reset();

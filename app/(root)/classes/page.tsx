@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useQueries } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -27,13 +27,13 @@ import {
   useUserByEmail,
   useTeacherByUserId,
 } from "@/lib/hooks/queries";
-import { classApi } from "@/lib/api/class";
-import { queryKeys } from "@/lib/query-keys";
 import { cn } from "@/lib/utils";
 import { useThemeContext } from "@/components/theme-provider";
+import { ClassesPageSkeleton } from "@/components/skeletons";
 
 export default function ModernClassesPage() {
   const session = useSession();
+  const router = useRouter();
   const { theme } = useThemeContext();
   const accentColor = theme === "dark" ? "#892FFF" : "#FF932C";
 
@@ -92,15 +92,6 @@ export default function ModernClassesPage() {
     return filtered;
   }, [classes, searchQuery, activeTab]);
 
-  const classStatsQueries = useQueries({
-    queries: classes.map((cls: IClass) => ({
-      queryKey: queryKeys.classes.stats(cls._id || ""),
-      queryFn: () => classApi.getClassStats(cls._id!, userData!),
-      enabled: !!userData && !!cls._id,
-      staleTime: 60_000,
-    })),
-  });
-
   const overallStats = useMemo<IClassStats | null>(() => {
     if (classes.length === 0) return null;
 
@@ -113,30 +104,14 @@ export default function ModernClassesPage() {
       0
     );
 
-    const statsResults = classStatsQueries
-      .map((q) => q.data)
-      .filter((s): s is IClassStats => !!s);
-
-    const averageProgress =
-      statsResults.length > 0
-        ? Math.round(
-            statsResults.reduce((sum, s) => sum + (s.averageProgress || 0), 0) /
-              statsResults.length
-          )
-        : 0;
-
-    const activeStudents =
-      statsResults.length > 0
-        ? statsResults.reduce((sum, s) => sum + (s.activeStudents || 0), 0)
-        : 0;
-
+    // Derive summary from list fields — avoid N× getClassStats on the list page.
     return {
       totalStudents,
       totalCourses,
-      activeStudents,
-      averageProgress,
+      activeStudents: totalStudents,
+      averageProgress: 0,
     };
-  }, [classes, classStatsQueries]);
+  }, [classes]);
 
   const tabCounts = useMemo(() => {
     return {
@@ -162,7 +137,7 @@ export default function ModernClassesPage() {
   };
 
   const handleViewClass = (classId: string) => {
-    window.location.href = `/classes/${classId}`;
+    router.push(`/classes/${classId}`);
   };
 
   const handleEditClass = (_classId: string) => {
@@ -207,18 +182,7 @@ export default function ModernClassesPage() {
   };
 
   if (isLoading || session.isPending) {
-    return (
-      <div className="flex min-h-[50vh] items-center justify-center bg-muted/10">
-        <div className="flex items-center gap-3 rounded-2xl border border-border/40 bg-card/40 px-5 py-4 shadow-sm backdrop-blur-sm">
-          <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary/30 border-t-primary" />
-          <span className="text-sm text-muted-foreground">
-            {session.isPending
-              ? "Checking authentication…"
-              : "Loading classes…"}
-          </span>
-        </div>
-      </div>
-    );
+    return <ClassesPageSkeleton />;
   }
 
   return (

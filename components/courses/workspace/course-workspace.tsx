@@ -34,7 +34,7 @@ import { queryKeys } from "@/lib/query-keys";
 import { STALE_TIMES } from "@/lib/query-client";
 import { useAuth } from "@/hooks/use-auth";
 import { getIdeLearnUrl } from "@/lib/utils";
-import { CourseEditorPageSkeleton } from "../loading/course-edit-skeleton";
+import { CourseWorkspaceSkeleton } from "@/components/skeletons";
 import { CourseNotFound } from "../course-not-found";
 import {
   CourseWorkspaceTabs,
@@ -444,7 +444,7 @@ export function CourseWorkspace({ mode, courseId }: CourseWorkspaceProps) {
   };
 
   if (isLoading) {
-    return <CourseEditorPageSkeleton />;
+    return <CourseWorkspaceSkeleton />;
   }
 
   if (mode === "edit" && !course) {

@@ -5,6 +5,7 @@ import { useSession } from "@/lib/auth-client";
 import { useUserByEmail, useTeacherByUserId } from "@/lib/hooks/queries";
 import ModernCourseDashboard from "@/components/courses/modern-course-dashboard";
 import { OrganizationRequirementMessage } from "@/components/courses/organization-requirement-message";
+import { CoursesPageSkeleton } from "@/components/skeletons";
 
 function isTeacherOrAdminRole(
   role: string | undefined,
@@ -96,18 +97,7 @@ export default function CoursesPage() {
 
   // Show loading state while data is being fetched
   if (isLoading || (canManageCourses && hasOrganization === null)) {
-    return (
-      <div className="flex min-h-[50vh] items-center justify-center bg-muted/10">
-        <div className="flex items-center gap-3 rounded-2xl border border-border/40 bg-card/40 px-5 py-4 shadow-sm backdrop-blur-sm">
-          <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary/30 border-t-primary" />
-          <span className="text-sm text-muted-foreground">
-            {session.isPending
-              ? "Checking authentication…"
-              : "Loading courses…"}
-          </span>
-        </div>
-      </div>
-    );
+    return <CoursesPageSkeleton />;
   }
 
   // Nest user profile missing — still allow catalog for students; teachers need provisioning

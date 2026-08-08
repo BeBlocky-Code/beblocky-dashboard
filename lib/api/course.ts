@@ -950,65 +950,38 @@ export async function fetchAllCoursesWithDetails(): Promise<ClientCourse[]> {
 
   const coursesData = await response.json();
 
-  // Process courses with additional details using new endpoints
-  const coursesWithDetails: ClientCourse[] = await Promise.all(
-    coursesData.map(async (course: any) => {
-      try {
-        // Fetch lessons and slides for this specific course
-        const [lessons, slides] = await Promise.all([
-          fetchLessonsForCourse(course._id),
-          fetchSlidesForCourse(course._id),
-        ]);
+  // Counts come from id arrays already on the course — no per-course
+  // lessons/slides round-trips (was 1 + 2N).
+  return coursesData.map((course: any) => {
+    const slides =
+      course.slides
+        ?.filter((id: any) => id && id.toString().length === 24)
+        ?.map((id: any) => new Types.ObjectId(id.toString())) || [];
+    const lessons =
+      course.lessons
+        ?.filter((id: any) => id && id.toString().length === 24)
+        ?.map((id: any) => new Types.ObjectId(id.toString())) || [];
+    const students =
+      course.students
+        ?.filter((id: any) => id && id.toString().length === 24)
+        ?.map((id: any) => new Types.ObjectId(id.toString())) || [];
 
-        // Transform the course data
-        const transformedCourse: ClientCourse = {
-          ...course,
-          _id: course._id,
-          school:
-            course.school && course.school.toString().length === 24
-              ? new Types.ObjectId(course.school.toString())
-              : new Types.ObjectId(),
-          slides:
-            course.slides
-              ?.filter((id: any) => id && id.toString().length === 24)
-              ?.map((id: any) => new Types.ObjectId(id.toString())) || [],
-          lessons:
-            course.lessons
-              ?.filter((id: any) => id && id.toString().length === 24)
-              ?.map((id: any) => new Types.ObjectId(id.toString())) || [],
-          students:
-            course.students
-              ?.filter((id: any) => id && id.toString().length === 24)
-              ?.map((id: any) => new Types.ObjectId(id.toString())) || [],
-          lessonsCount: lessons.length,
-          slidesCount: slides.length,
-          studentsCount: course.students?.length || 0,
-          lastUpdated: formatRelativeTime(course.updatedAt || course.createdAt),
-        };
-
-        return transformedCourse;
-      } catch (error) {
-        console.error(
-          `Error fetching details for course ${course._id}:`,
-          error
-        );
-        return {
-          ...course,
-          _id: course._id,
-          school: new Types.ObjectId(),
-          slides: [],
-          lessons: [],
-          students: [],
-          lessonsCount: 0,
-          slidesCount: 0,
-          studentsCount: 0,
-          lastUpdated: "Recently",
-        };
-      }
-    })
-  );
-
-  return coursesWithDetails;
+    return {
+      ...course,
+      _id: course._id,
+      school:
+        course.school && course.school.toString().length === 24
+          ? new Types.ObjectId(course.school.toString())
+          : new Types.ObjectId(),
+      slides,
+      lessons,
+      students,
+      lessonsCount: lessons.length,
+      slidesCount: slides.length,
+      studentsCount: course.students?.length || 0,
+      lastUpdated: formatRelativeTime(course.updatedAt || course.createdAt),
+    } as ClientCourse;
+  });
 }
 
 /**
