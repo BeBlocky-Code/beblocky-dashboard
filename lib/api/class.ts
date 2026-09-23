@@ -7,51 +7,20 @@ import type {
   IClassStats,
 } from "@/types/class";
 import type { IUser } from "@/types/user";
-import type { ITeacher } from "@/types/teacher";
-import { getApiAuthHeaders } from "@/lib/auth-client";
-
-const getApiUrl = (endpoint: string) => {
-  if (!process.env.NEXT_PUBLIC_API_URL) {
-    throw new Error("API URL is not configured");
-  }
-  return `${process.env.NEXT_PUBLIC_API_URL}/classes${endpoint}`;
-};
-
-async function classAuthHeaders(user: IUser) {
-  const auth = await getApiAuthHeaders();
-  return {
-    ...auth,
-    "x-user-id": user._id || user.email || "",
-    "x-user-type": user.role || "",
-  };
-}
+import { apiFetch, ApiError } from "@/lib/api/utils";
 
 export const classApi = {
   // Class CRUD operations
-  async createClass(data: ICreateClassDto, user: IUser): Promise<IClass> {
-    const authHeaders = await classAuthHeaders(user);
-    const response = await fetch(getApiUrl(""), {
+  async createClass(data: ICreateClassDto, _user?: IUser): Promise<IClass> {
+    return apiFetch<IClass>("/classes", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...authHeaders,
-      },
-      credentials: "include",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(
-        `Failed to create class: ${response.status} ${errorText}`,
-      );
-    }
-
-    return response.json();
   },
 
   async getClasses(
-    user: IUser,
+    _user: IUser,
     filters?: {
       creatorId?: string;
       organizationId?: string;
@@ -67,168 +36,62 @@ export const classApi = {
       });
     }
 
-    const authHeaders = await classAuthHeaders(user);
-    const response = await fetch(getApiUrl(`?${params}`), {
-      headers: authHeaders,
-      credentials: "include",
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(
-        `Failed to fetch classes: ${response.status} ${errorText}`,
-      );
-    }
-
-    return response.json();
+    const qs = params.toString();
+    return apiFetch<IClass[]>(`/classes${qs ? `?${qs}` : ""}`);
   },
 
-  async getClassById(id: string, user: IUser): Promise<IClass> {
-    try {
-      const authHeaders = await classAuthHeaders(user);
-      const response = await fetch(getApiUrl(`/${id}`), {
-        headers: authHeaders,
-        credentials: "include",
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("API Error:", response.status, errorText);
-
-        // Parse error response if it's JSON
-        let errorData;
-        try {
-          errorData = JSON.parse(errorText);
-        } catch {
-          errorData = { message: errorText };
-        }
-
-        throw new Error(
-          errorData.message || `Failed to get class: ${response.status}`
-        );
-      }
-
-      const result = await response.json();
-      console.log("Class retrieved successfully:", result);
-      return result;
-    } catch (error) {
-      console.error("Class API error:", error);
-      throw error; // Re-throw the error instead of returning mock data
-    }
+  async getClassById(id: string, _user: IUser): Promise<IClass> {
+    return apiFetch<IClass>(`/classes/${id}`);
   },
 
   async updateClass(
     id: string,
     data: IUpdateClassDto,
-    user: IUser
+    _user: IUser,
   ): Promise<IClass> {
-    try {
-      const authHeaders = await classAuthHeaders(user);
-      const response = await fetch(getApiUrl(`/${id}`), {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          ...authHeaders,
-        },
-        credentials: "include",
-        body: JSON.stringify(data),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("API Error:", response.status, errorText);
-
-        // Parse error response if it's JSON
-        let errorData;
-        try {
-          errorData = JSON.parse(errorText);
-        } catch {
-          errorData = { message: errorText };
-        }
-
-        throw new Error(
-          errorData.message || `Failed to update class: ${response.status}`
-        );
-      }
-
-      const result = await response.json();
-      console.log("Class updated successfully:", result);
-      return result;
-    } catch (error) {
-      console.error("Class API error:", error);
-      throw error; // Re-throw the error instead of returning mock data
-    }
+    return apiFetch<IClass>(`/classes/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
   },
 
-  async deleteClass(id: string, user: IUser): Promise<void> {
-    try {
-      const authHeaders = await classAuthHeaders(user);
-      const response = await fetch(getApiUrl(`/${id}`), {
-        method: "DELETE",
-        headers: authHeaders,
-        credentials: "include",
-      });
-
-    if (!response.ok) {
-      throw new Error(
-        `Failed to delete class: ${response.status} ${response.statusText}`,
-      );
-    }
-  } catch (error) {
-    console.error("Class API error deleting class:", error);
-    throw error;
-  }
+  async deleteClass(id: string, _user: IUser): Promise<void> {
+    await apiFetch<void>(`/classes/${id}`, {
+      method: "DELETE",
+    });
   },
 
   // Student management
   async addStudent(
     classId: string,
     data: IAddStudentDto,
-    user: IUser
+    _user: IUser,
   ): Promise<{ success: boolean; data?: IClass; error?: any }> {
     try {
-      const authHeaders = await classAuthHeaders(user);
-      const response = await fetch(getApiUrl(`/${classId}/add-student`), {
+      const result = await apiFetch<IClass>(`/classes/${classId}/add-student`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          ...authHeaders,
-        },
-        credentials: "include",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
-
-      if (!response.ok) {
-        // Parse error response
-        let errorData;
-        try {
-          errorData = await response.json();
-        } catch {
-          errorData = {
-            message: `Failed to add student: ${response.status} ${response.statusText}`,
-            error: "Bad Request",
-            statusCode: response.status,
-          };
-        }
-
-        // Return structured error response
-        return {
-          success: false,
-          error: errorData,
-        };
-      }
-
-      const result = await response.json();
-      return {
-        success: true,
-        data: result,
-      };
+      return { success: true, data: result };
     } catch (error) {
       console.error("Class API error adding student:", error);
+      if (error instanceof ApiError) {
+        return {
+          success: false,
+          error: {
+            message: error.message,
+            error: "Bad Request",
+            statusCode: error.status,
+          },
+        };
+      }
       return {
         success: false,
         error: {
-          message: error instanceof Error ? error.message : "Failed to add student",
+          message:
+            error instanceof Error ? error.message : "Failed to add student",
         },
       };
     }
@@ -237,51 +100,37 @@ export const classApi = {
   async removeStudent(
     classId: string,
     studentId: string,
-    user: IUser
+    _user: IUser,
   ): Promise<{ success: boolean; data?: IClass; error?: any }> {
     try {
-      const authHeaders = await classAuthHeaders(user);
-      const response = await fetch(getApiUrl(`/${classId}/remove-student`), {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          ...authHeaders,
+      const result = await apiFetch<IClass>(
+        `/classes/${classId}/remove-student`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ studentId }),
         },
-        credentials: "include",
-        body: JSON.stringify({ studentId }),
-      });
-
-      if (!response.ok) {
-        // Parse error response
-        let errorData;
-        try {
-          errorData = await response.json();
-        } catch {
-          errorData = {
-            message: `Failed to remove student: ${response.status} ${response.statusText}`,
-            error: "Bad Request",
-            statusCode: response.status,
-          };
-        }
-
-        // Return structured error response
-        return {
-          success: false,
-          error: errorData,
-        };
-      }
-
-      const result = await response.json();
-      return {
-        success: true,
-        data: result,
-      };
+      );
+      return { success: true, data: result };
     } catch (error) {
       console.error("Class API error removing student:", error);
+      if (error instanceof ApiError) {
+        return {
+          success: false,
+          error: {
+            message: error.message,
+            error: "Bad Request",
+            statusCode: error.status,
+          },
+        };
+      }
       return {
         success: false,
         error: {
-          message: error instanceof Error ? error.message : "Failed to remove student",
+          message:
+            error instanceof Error
+              ? error.message
+              : "Failed to remove student",
         },
       };
     }
@@ -291,39 +140,25 @@ export const classApi = {
   async addCourse(
     classId: string,
     data: IAddCourseDto,
-    user: IUser
+    _user: IUser,
   ): Promise<IClass> {
-    const authHeaders = await classAuthHeaders(user);
-    const response = await fetch(getApiUrl(`/${classId}/add-course`), {
+    return apiFetch<IClass>(`/classes/${classId}/add-course`, {
       method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        ...authHeaders,
-      },
-      credentials: "include",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
-    if (!response.ok) throw new Error("Failed to add course");
-    return response.json();
   },
 
   async removeCourse(
     classId: string,
     courseId: string,
-    user: IUser
+    _user: IUser,
   ): Promise<IClass> {
-    const authHeaders = await classAuthHeaders(user);
-    const response = await fetch(getApiUrl(`/${classId}/remove-course`), {
+    return apiFetch<IClass>(`/classes/${classId}/remove-course`, {
       method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        ...authHeaders,
-      },
-      credentials: "include",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ courseId }),
     });
-    if (!response.ok) throw new Error("Failed to remove course");
-    return response.json();
   },
 
   // Class settings and management
@@ -334,51 +169,34 @@ export const classApi = {
       requireApproval?: boolean;
       autoProgress?: boolean;
     },
-    user: IUser
+    _user: IUser,
   ): Promise<{ success: boolean; data?: IClass; error?: any }> {
     try {
-      const authHeaders = await classAuthHeaders(user);
-      const response = await fetch(getApiUrl(`/${classId}/settings`), {
+      const result = await apiFetch<IClass>(`/classes/${classId}/settings`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          ...authHeaders,
-        },
-        credentials: "include",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(settings),
       });
-
-      if (!response.ok) {
-        // Parse error response
-        let errorData;
-        try {
-          errorData = await response.json();
-        } catch {
-          errorData = {
-            message: `Failed to update settings: ${response.status} ${response.statusText}`,
-            error: "Bad Request",
-            statusCode: response.status,
-          };
-        }
-
-        // Return structured error response
-        return {
-          success: false,
-          error: errorData,
-        };
-      }
-
-      const result = await response.json();
-      return {
-        success: true,
-        data: result,
-      };
+      return { success: true, data: result };
     } catch (error) {
       console.error("Class API error updating settings:", error);
+      if (error instanceof ApiError) {
+        return {
+          success: false,
+          error: {
+            message: error.message,
+            error: "Bad Request",
+            statusCode: error.status,
+          },
+        };
+      }
       return {
         success: false,
         error: {
-          message: error instanceof Error ? error.message : "Failed to update settings",
+          message:
+            error instanceof Error
+              ? error.message
+              : "Failed to update settings",
         },
       };
     }
@@ -387,30 +205,33 @@ export const classApi = {
   async extendEndDate(
     classId: string,
     newEndDate: Date,
-    user: IUser
+    _user: IUser,
   ): Promise<IClass> {
-    const authHeaders = await classAuthHeaders(user);
-    const response = await fetch(getApiUrl(`/${classId}/extend`), {
+    return apiFetch<IClass>(`/classes/${classId}/extend`, {
       method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        ...authHeaders,
-      },
-      credentials: "include",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ endDate: newEndDate }),
     });
-    if (!response.ok) throw new Error("Failed to extend class");
-    return response.json();
   },
 
   // Statistics
-  async getClassStats(classId: string, user: IUser): Promise<IClassStats> {
-    const authHeaders = await classAuthHeaders(user);
-    const response = await fetch(getApiUrl(`/${classId}/stats`), {
-      headers: authHeaders,
-      credentials: "include",
-    });
-    if (!response.ok) throw new Error("Failed to fetch class stats");
-    return response.json();
+  async getClassStats(classId: string, _user: IUser): Promise<IClassStats> {
+    return apiFetch<IClassStats>(`/classes/${classId}/stats`);
+  },
+
+  /** Standing for enrolled learners in Class Courses (no saved code). */
+  async getClassStanding(classId: string): Promise<
+    Array<{
+      learnerId: string;
+      standings: Array<{
+        courseId: string;
+        percentage: number;
+        completedLessonCount: number;
+        totalLessons: number;
+        coinsEarned: number;
+      }>;
+    }>
+  > {
+    return apiFetch(`/classes/${classId}/standing`);
   },
 };

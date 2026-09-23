@@ -49,7 +49,7 @@ import type { IClass } from "@/types/class";
 import { studentApi } from "@/lib/api/student";
 import { classApi } from "@/lib/api/class";
 import { userApi } from "@/lib/api/user";
-import { progressApi } from "@/lib/api/progress";
+import { apiFetch, ApiError } from "@/lib/api/utils";
 import { useSession } from "@/lib/auth-client";
 import { toast } from "sonner";
 import { ErrorPopup } from "@/components/ui/error-popup";
@@ -140,16 +140,32 @@ export function ModernManageStudentsDialog({
 
       // Get class data to access student IDs
       const classData = await classApi.getClassById(classId, userData);
-      const allProgress = await progressApi.getAllProgress();
+      let standingByLearner = new Map<string, number>();
+      try {
+        const standing = await classApi.getClassStanding(classId);
+        standingByLearner = new Map(
+          standing.map((row) => {
+            const avg =
+              row.standings.length === 0
+                ? 0
+                : Math.round(
+                    row.standings.reduce((s, st) => s + st.percentage, 0) /
+                      row.standings.length
+                  );
+            return [row.learnerId, avg];
+          })
+        );
+      } catch {
+        /* fall back below */
+      }
 
       const averageProgressForStudent = (...studentKeys: string[]) => {
-        const keySet = new Set(studentKeys.filter(Boolean));
-        const records = allProgress.filter((p) => keySet.has(p.studentId));
-        if (records.length === 0) return 0;
-        return Math.round(
-          records.reduce((sum, r) => sum + (r.completionPercentage || 0), 0) /
-            records.length
-        );
+        for (const key of studentKeys.filter(Boolean)) {
+          if (standingByLearner.has(key)) {
+            return standingByLearner.get(key)!;
+          }
+        }
+        return 0;
       };
 
       // Load student data for each student ID in the class
@@ -270,46 +286,30 @@ export function ModernManageStudentsDialog({
     setError(null);
 
     try {
-      const userData = await userApi.getUserByEmail(session.data.user.email);
+      await apiFetch(`/classes/${classId}/add-student-by-email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: inviteEmail }),
+      });
 
-      // Use the correct endpoint for single student add
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/classes/${classId}/add-student-by-email`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-user-id": userData._id || userData.email,
-            "x-user-type": userData.role,
-          },
-          credentials: "include",
-          body: JSON.stringify({ email: inviteEmail }),
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        setError({
-          message: errorData.message || "Failed to add student",
-          error: errorData.error || "Bad Request",
-          statusCode: response.status,
-        });
-        return;
-      }
-
-      const result = await response.json();
-
-      // Success - refresh the student list
       toast.success("Student added successfully!");
       setInviteEmail("");
-      await loadStudents(); // Refresh the student list
+      await loadStudents();
     } catch (error) {
       console.error("Failed to invite student:", error);
-      setError({
-        message: "Failed to add student. Please try again.",
-        error: "Internal Error",
-        statusCode: 500,
-      });
+      if (error instanceof ApiError) {
+        setError({
+          message: error.message.replace(/^API call failed:\s*/, "") || "Failed to add student",
+          error: "Bad Request",
+          statusCode: error.status,
+        });
+      } else {
+        setError({
+          message: "Failed to add student. Please try again.",
+          error: "Internal Error",
+          statusCode: 500,
+        });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -347,8 +347,6 @@ export function ModernManageStudentsDialog({
     setImportResults(null);
 
     try {
-      const userData = await userApi.getUserByEmail(session.data.user.email);
-
       // Parse CSV file with better error handling
       const text = await file.text();
 
@@ -426,32 +424,14 @@ export function ModernManageStudentsDialog({
         uniqueEmails
       );
 
-      // Call bulk import endpoint
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/classes/${classId}/bulk-import-students`,
+      const result = await apiFetch<BulkImportResult>(
+        `/classes/${classId}/bulk-import-students`,
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-user-id": userData._id || userData.email,
-            "x-user-type": userData.role,
-          },
-          credentials: "include",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
-        }
+        },
       );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        setError({
-          message: errorData.message || "Failed to import students",
-          error: errorData.error || "Bad Request",
-          statusCode: response.status,
-        });
-        return;
-      }
-
-      const result: BulkImportResult = await response.json();
       setImportResults(result);
 
       // Show success/failure summary
@@ -468,11 +448,21 @@ export function ModernManageStudentsDialog({
       }
     } catch (error) {
       console.error("Failed to import students:", error);
-      setError({
-        message: "Failed to import students. Please try again.",
-        error: "Internal Error",
-        statusCode: 500,
-      });
+      if (error instanceof ApiError) {
+        setError({
+          message:
+            error.message.replace(/^API call failed:\s*/, "") ||
+            "Failed to import students",
+          error: "Bad Request",
+          statusCode: error.status,
+        });
+      } else {
+        setError({
+          message: "Failed to import students. Please try again.",
+          error: "Internal Error",
+          statusCode: 500,
+        });
+      }
     } finally {
       setIsUploading(false);
       // Reset file input
