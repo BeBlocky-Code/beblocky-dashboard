@@ -236,35 +236,11 @@ export async function updateLesson(
   updatedData: Partial<ILesson>
 ): Promise<ILesson> {
   try {
-    if (!process.env.NEXT_PUBLIC_API_URL) {
-      throw new Error("API URL is not configured");
-    }
-
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/lessons/${lessonId}`,
-      {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify(updatedData),
-      }
-    );
-
-    if (!response.ok) {
-      let errorData = null;
-      try {
-        errorData = await response.json();
-      } catch {}
-
-      throw new Error(
-        errorData?.message ||
-          `Failed to update lesson: ${response.status} ${response.statusText}`,
-      );
-    }
-
-    return await response.json();
+    return await apiFetch<ILesson>(`/lessons/${lessonId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updatedData),
+    });
   } catch (error) {
     console.error("Course API error updating lesson:", error);
     throw error;
@@ -276,29 +252,9 @@ export async function updateLesson(
  */
 export async function deleteLesson(lessonId: string): Promise<void> {
   try {
-    if (!process.env.NEXT_PUBLIC_API_URL) {
-      throw new Error("API URL is not configured");
-    }
-
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/lessons/${lessonId}`,
-      {
-        method: "DELETE",
-        credentials: "include",
-      }
-    );
-
-    if (!response.ok) {
-      let errorData: any = null;
-      try {
-        errorData = await response.json();
-      } catch {}
-
-      throw new Error(
-        errorData?.message ||
-          `Failed to delete lesson: ${response.status} ${response.statusText}`,
-      );
-    }
+    await apiFetch<void>(`/lessons/${lessonId}`, {
+      method: "DELETE",
+    });
   } catch (error) {
     console.error("Course API error deleting lesson:", error);
     throw error;
@@ -367,15 +323,7 @@ export async function createSlide(
     body: formData,
   });
 
-  // Lesson.slides is updated by the API on create. Course.slides is not —
-  // link it here and fail loudly so counts/refs don't drift silently.
-  const courseId = String(slideData.courseId);
-  const slideId = String(newSlide._id);
-  await apiFetch(`/courses/${courseId}`, {
-    method: "PUT",
-    body: JSON.stringify({ $addToSet: { slides: slideId } }),
-  });
-
+  // lesson.slides is SoT — API updates it on create. Do not write course.slides.
   return newSlide;
 }
 
@@ -422,22 +370,7 @@ export async function updateSlide(
     body: formData,
   });
 
-  // Lesson slide membership is maintained by the API on update.
-  // Keep course.slides in sync when a slide is assigned/moved.
-  const courseId =
-    toRefId((updatedData as any).courseId) ||
-    toRefId((updatedData as any).course) ||
-    toRefId((updatedSlide as any).courseId) ||
-    toRefId((updatedSlide as any).course);
-  if (courseId && updatedSlide._id) {
-    await apiFetch(`/courses/${courseId}`, {
-      method: "PUT",
-      body: JSON.stringify({
-        $addToSet: { slides: String(updatedSlide._id) },
-      }),
-    });
-  }
-
+  // lesson.slides is SoT — API maintains membership on update.
   return updatedSlide;
 }
 
@@ -448,34 +381,11 @@ export async function reorderSlides(
   lessonId: string,
   slideIds: string[]
 ): Promise<ISlide[]> {
-  if (!process.env.NEXT_PUBLIC_API_URL) {
-    throw new Error("API URL is not configured");
-  }
-
-  const response = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL}/slides/reorder`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ lessonId, slideIds }),
-    }
-  );
-
-  if (!response.ok) {
-    let message = "Failed to reorder slides";
-    try {
-      const err = await response.json();
-      message = err?.message || message;
-    } catch {
-      /* ignore */
-    }
-    throw new Error(
-      Array.isArray(message) ? message.join(", ") : String(message)
-    );
-  }
-
-  return response.json();
+  return apiFetch<ISlide[]>("/slides/reorder", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ lessonId, slideIds }),
+  });
 }
 
 /**
@@ -483,29 +393,9 @@ export async function reorderSlides(
  */
 export async function deleteSlide(slideId: string): Promise<void> {
   try {
-    if (!process.env.NEXT_PUBLIC_API_URL) {
-      throw new Error("API URL is not configured");
-    }
-
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/slides/${slideId}`,
-      {
-        method: "DELETE",
-        credentials: "include",
-      }
-    );
-
-    if (!response.ok) {
-      let errorData: any = null;
-      try {
-        errorData = await response.json();
-      } catch {}
-
-      throw new Error(
-        errorData?.message ||
-          `Failed to delete slide: ${response.status} ${response.statusText}`,
-      );
-    }
+    await apiFetch<void>(`/slides/${slideId}`, {
+      method: "DELETE",
+    });
   } catch (error) {
     console.error("Course API error deleting slide:", error);
     throw error;
@@ -519,10 +409,6 @@ export async function createLesson(
   lessonData: ICreateLessonDto
 ): Promise<ILesson> {
   try {
-    if (!process.env.NEXT_PUBLIC_API_URL) {
-      throw new Error("API URL is not configured");
-    }
-
     if (
       !lessonData.courseId ||
       !lessonData.courseId.toString ||
@@ -544,36 +430,13 @@ export async function createLesson(
       apiPayload.slides = lessonData.slides.map((id) => id.toString());
     if (lessonData.tags) apiPayload.tags = lessonData.tags;
 
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/lessons`, {
+    const newLesson = await apiFetch<ILesson>("/lessons", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      credentials: "include",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(apiPayload),
     });
 
-    if (!response.ok) {
-      let errorData: any = null;
-      try {
-        errorData = await response.json();
-      } catch {}
-      throw new Error(
-        errorData?.message ||
-          `Failed to create lesson: ${response.status} ${response.statusText}`,
-      );
-    }
-
-    const newLesson = await response.json();
-
-    // Keep course.lessons in sync — API create does not do this.
-    await apiFetch(`/courses/${lessonData.courseId}`, {
-      method: "PUT",
-      body: JSON.stringify({
-        $addToSet: { lessons: String(newLesson._id) },
-      }),
-    });
-
+    // course.lessons membership is maintained by the API on create.
     return newLesson;
   } catch (error) {
     console.error("Course API error creating lesson:", error);
@@ -582,7 +445,8 @@ export async function createLesson(
 }
 
 /**
- * Fetch complete course data including lessons and slides
+ * Fetch complete course data including lessons and slides.
+ * Prefers lesson.slides from deep-populated course GET (source of truth).
  */
 export async function fetchCompleteCourseData(courseId: string): Promise<{
   course: ClientCourse;
@@ -590,14 +454,74 @@ export async function fetchCompleteCourseData(courseId: string): Promise<{
   slides: ISlide[];
 }> {
   try {
-    // Fetch all data in parallel
-    const [course, lessons, slides] = await Promise.all([
-      fetchCourse(courseId),
-      fetchLessonsForCourse(courseId),
-      fetchSlidesForCourse(courseId),
-    ]);
+    const course = await fetchCourse(courseId);
+    const courseLessons = Array.isArray((course as any)?.lessons)
+      ? ((course as any).lessons as any[])
+      : [];
 
-    // Update course with counts
+    const isPopulatedSlide = (s: unknown) =>
+      typeof s === "object" && s !== null && !Array.isArray(s);
+    const isPopulatedLesson = (l: unknown) =>
+      typeof l === "object" &&
+      l !== null &&
+      !Array.isArray(l) &&
+      ("_id" in (l as object) || "id" in (l as object));
+
+    const hasDeepSlides =
+      courseLessons.length > 0 &&
+      courseLessons.every((lesson) => {
+        if (!isPopulatedLesson(lesson)) return false;
+        const raw = Array.isArray(lesson.slides) ? lesson.slides : [];
+        return raw.length === 0 || raw.every(isPopulatedSlide);
+      });
+
+    let lessons: ILesson[];
+    let slides: ISlide[];
+
+    if (hasDeepSlides) {
+      lessons = courseLessons as ILesson[];
+      const byId = new Map<string, ISlide>();
+      for (const lesson of courseLessons) {
+        for (const slide of lesson.slides || []) {
+          if (!isPopulatedSlide(slide)) continue;
+          const id = String((slide as any)._id || (slide as any).id || "");
+          if (id) byId.set(id, slide as ISlide);
+        }
+      }
+      slides = Array.from(byId.values());
+    } else {
+      // Fall back: lessons endpoint; slides from lesson.slides or GET /slides?lessonId=
+      const fetchedLessons = await fetchLessonsForCourse(courseId);
+      lessons = fetchedLessons;
+
+      const byId = new Map<string, ISlide>();
+      for (const lesson of fetchedLessons as any[]) {
+        const raw = Array.isArray(lesson?.slides) ? lesson.slides : [];
+        const populated = raw.filter(isPopulatedSlide) as ISlide[];
+        if (populated.length > 0) {
+          for (const s of populated) {
+            const id = String((s as any)._id || (s as any).id || "");
+            if (id) byId.set(id, s);
+          }
+          continue;
+        }
+        const lessonId = toRefId(lesson);
+        if (!lessonId) continue;
+        try {
+          const lessonSlides = await apiFetch<ISlide[]>(
+            `/slides?lessonId=${lessonId}`,
+          );
+          for (const s of lessonSlides || []) {
+            const id = String((s as any)._id || (s as any).id || "");
+            if (id) byId.set(id, s);
+          }
+        } catch {
+          /* leave empty for this lesson */
+        }
+      }
+      slides = Array.from(byId.values());
+    }
+
     const courseWithCounts: ClientCourse = {
       ...course,
       lessonsCount: lessons.length,
@@ -620,7 +544,14 @@ export async function fetchCompleteCourseData(courseId: string): Promise<{
  * Fetch all courses with their details (lessons, slides, students count)
  */
 export async function fetchAllCoursesWithDetails(): Promise<ClientCourse[]> {
-  const coursesData = await apiFetch<any[]>("/courses");
+  if (!process.env.NEXT_PUBLIC_API_URL) {
+    throw new Error("API URL is not configured");
+  }
+  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses`);
+  if (!response.ok) {
+    throw new Error(`API call failed: ${response.statusText}`);
+  }
+  const coursesData = (await response.json()) as any[];
 
   // Counts from lesson/slide refs (string ids OR populated docs).
   return coursesData.map((course: any) => {

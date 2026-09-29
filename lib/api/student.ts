@@ -1,66 +1,30 @@
 import type { IStudent } from "@/types/student";
 import type { IUser } from "@/types/user";
-import { getApiAuthHeaders } from "@/lib/auth-client";
-
-const getApiUrl = (endpoint: string) => {
-  if (!process.env.NEXT_PUBLIC_API_URL) {
-    throw new Error("API URL is not configured");
-  }
-  return `${process.env.NEXT_PUBLIC_API_URL}${endpoint}`;
-};
-
-async function parseError(response: Response): Promise<string> {
-  const errorText = await response.text();
-  try {
-    const errorData = JSON.parse(errorText);
-    return errorData.message || errorText || response.statusText;
-  } catch {
-    return errorText || response.statusText;
-  }
-}
+import { apiFetch, ApiError } from "@/lib/api/utils";
 
 export const studentApi = {
   async getStudentByEmail(email: string, _user: IUser): Promise<IStudent> {
-    const headers = await getApiAuthHeaders();
-    const response = await fetch(
-      getApiUrl(`/students/email/${encodeURIComponent(email)}`),
-      {
-        headers,
-        credentials: "include",
-      },
-    );
-
-    if (!response.ok) {
-      if (response.status === 404) {
+    try {
+      return await apiFetch<IStudent>(
+        `/students/email/${encodeURIComponent(email)}`,
+      );
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 404) {
         throw new Error("Student not found");
       }
-      throw new Error(
-        (await parseError(response)) ||
-          `Failed to get student by email: ${response.status}`,
-      );
+      throw error;
     }
-
-    return response.json();
   },
 
   async getStudentByUserId(userId: string, _user: IUser): Promise<IStudent> {
-    const headers = await getApiAuthHeaders();
-    const response = await fetch(getApiUrl(`/students/user/${userId}`), {
-      headers,
-      credentials: "include",
-    });
-
-    if (!response.ok) {
-      if (response.status === 404) {
+    try {
+      return await apiFetch<IStudent>(`/students/user/${userId}`);
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 404) {
         throw new Error("Student not found");
       }
-      throw new Error(
-        (await parseError(response)) ||
-          `Failed to get student: ${response.status}`,
-      );
+      throw error;
     }
-
-    return response.json();
   },
 
   async getCurrentStudent(user: IUser): Promise<IStudent> {

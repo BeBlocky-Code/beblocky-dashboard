@@ -1,16 +1,11 @@
+import { apiFetch } from "@/lib/api/utils";
+
 export interface ICourseProgress {
   _id?: string;
   studentId: string;
   courseId: string;
   completionPercentage: number;
 }
-
-const getApiUrl = (endpoint: string) => {
-  if (!process.env.NEXT_PUBLIC_API_URL) {
-    throw new Error("API URL is not configured");
-  }
-  return `${process.env.NEXT_PUBLIC_API_URL}${endpoint}`;
-};
 
 function normalizeProgressRecord(record: Record<string, unknown>): ICourseProgress {
   const studentId =
@@ -33,15 +28,7 @@ function normalizeProgressRecord(record: Record<string, unknown>): ICourseProgre
 
 export const progressApi = {
   async getAllProgress(): Promise<ICourseProgress[]> {
-    const response = await fetch(getApiUrl("/progress"), {
-      credentials: "include",
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to load progress: ${response.status}`);
-    }
-
-    const data = await response.json();
+    const data = await apiFetch<unknown[]>("/progress");
     if (!Array.isArray(data)) return [];
 
     return data.map((record) =>

@@ -1,73 +1,25 @@
 import type { ITeacher } from "@/types/teacher";
 import type { IUser } from "@/types/user";
-import { getApiAuthHeaders } from "@/lib/auth-client";
-
-const getApiUrl = (endpoint: string) => {
-  if (!process.env.NEXT_PUBLIC_API_URL) {
-    throw new Error("API URL is not configured");
-  }
-  return `${process.env.NEXT_PUBLIC_API_URL}${endpoint}`;
-};
-
-async function teacherAuthHeaders(user: IUser) {
-  const auth = await getApiAuthHeaders();
-  return {
-    ...auth,
-    "x-user-id": user._id || user.email || "",
-    "x-user-type": user.role || "teacher",
-  };
-}
-
-async function parseError(response: Response): Promise<string> {
-  const errorText = await response.text();
-  try {
-    const errorData = JSON.parse(errorText);
-    return errorData.message || errorText || response.statusText;
-  } catch {
-    return errorText || response.statusText;
-  }
-}
+import { apiFetch, ApiError } from "@/lib/api/utils";
 
 export const teacherApi = {
-  async createTeacherFromUser(userId: string, user: IUser): Promise<ITeacher> {
-    const authHeaders = await teacherAuthHeaders(user);
-    const response = await fetch(getApiUrl("/teachers/from-user"), {
+  async createTeacherFromUser(userId: string, _user: IUser): Promise<ITeacher> {
+    return apiFetch<ITeacher>("/teachers/from-user", {
       method: "POST",
-      headers: {
-        ...authHeaders,
-      },
-      credentials: "include",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userId }),
     });
-
-    if (!response.ok) {
-      throw new Error(
-        (await parseError(response)) ||
-          `Failed to create teacher: ${response.status}`,
-      );
-    }
-
-    return response.json();
   },
 
-  async getTeacherByUserId(userId: string, user: IUser): Promise<ITeacher> {
-    const authHeaders = await teacherAuthHeaders(user);
-    const response = await fetch(getApiUrl(`/teachers/user/${userId}`), {
-      headers: authHeaders,
-      credentials: "include",
-    });
-
-    if (!response.ok) {
-      if (response.status === 404) {
+  async getTeacherByUserId(userId: string, _user: IUser): Promise<ITeacher> {
+    try {
+      return await apiFetch<ITeacher>(`/teachers/user/${userId}`);
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 404) {
         throw new Error("Teacher not found");
       }
-      throw new Error(
-        (await parseError(response)) ||
-          `Failed to get teacher: ${response.status}`,
-      );
+      throw error;
     }
-
-    return response.json();
   },
 
   async getCurrentTeacher(user: IUser): Promise<ITeacher> {

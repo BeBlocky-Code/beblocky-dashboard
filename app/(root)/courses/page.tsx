@@ -5,6 +5,7 @@ import { useSession } from "@/lib/auth-client";
 import {
   useUserByEmail,
   useTeacherByUserId,
+  useCoursesWithDetails,
 } from "@/lib/hooks/queries";
 import ModernCourseDashboard from "@/components/courses/modern-course-dashboard";
 import { OrganizationRequirementMessage } from "@/components/courses/organization-requirement-message";
@@ -26,6 +27,10 @@ export default function CoursesPage() {
   const email = session.data?.user?.email;
   const sessionUserId = session.data?.user?.id;
   const sessionRoles = session.data?.user?.roles;
+
+  // Warm the course list while we resolve org membership — same query
+  // ModernCourseGrid reads after the gate.
+  useCoursesWithDetails();
 
   // Fetch user data using TanStack Query
   const {

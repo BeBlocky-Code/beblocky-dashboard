@@ -43,6 +43,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ICourse } from "@/types/course";
 import { Types } from "mongoose";
+import { apiFetch } from "@/lib/api/utils";
 
 interface ModernCourseCreationFlowProps {
   open: boolean;
@@ -148,11 +149,6 @@ export function ModernCourseCreationFlow({
     try {
       setIsLoading(true);
 
-      // Validate API URL
-      if (!process.env.NEXT_PUBLIC_API_URL) {
-        throw new Error("API URL is not configured");
-      }
-
       const createCourseDto: ICreateCourseDto = {
         courseTitle: courseData.courseTitle,
         courseDescription: courseData.courseDescription,
@@ -161,24 +157,12 @@ export function ModernCourseCreationFlow({
         status: courseData.status,
       };
 
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/courses`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
-          body: JSON.stringify(createCourseDto),
-        }
-      );
+      const newCourse = await apiFetch<{ _id: string }>("/courses", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(createCourseDto),
+      });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.message || "Failed to create course");
-      }
-
-      const newCourse = await response.json();
       toast.success("Course created successfully!");
       router.push(`/courses/${newCourse._id}/edit`);
       onOpenChange(false);

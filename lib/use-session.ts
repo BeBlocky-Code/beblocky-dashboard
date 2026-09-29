@@ -2,7 +2,7 @@
 
 import { useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getSession, type SessionData } from "./auth-client";
+import { clearSessionCache, getSession, type SessionData } from "./auth-client";
 
 const SESSION_QUERY_KEY = ["session"] as const;
 
@@ -20,10 +20,12 @@ export function useSession() {
       return data ?? null;
     },
     staleTime: 5 * 60 * 1000,
+    refetchOnMount: false,
     refetchOnWindowFocus: false,
   });
 
   const refetch = useCallback(async () => {
+    clearSessionCache();
     await queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY });
   }, [queryClient]);
 
