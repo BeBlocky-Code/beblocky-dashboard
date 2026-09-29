@@ -141,14 +141,20 @@ export function ModernCourseGrid() {
         </div>
 
         <div className="relative w-full sm:w-80">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            type="text"
-            placeholder="Search courses…"
-            className="h-10 rounded-full border-border/40 bg-card/40 pl-10 backdrop-blur-sm focus-visible:ring-primary/20"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+          <div className="relative flex items-center rounded-full border border-border/40 bg-card/40 backdrop-blur-sm transition-all duration-200 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/20">
+            <Search
+              aria-hidden="true"
+              className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+            />
+            <Input
+              type="search"
+              placeholder="Search courses…"
+              aria-label="Search courses"
+              className="h-10 rounded-full border-0 bg-transparent pl-10 pr-4 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
         </div>
       </div>
 
