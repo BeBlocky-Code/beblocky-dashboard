@@ -56,7 +56,15 @@ export function LessonDetailsPanel({
 
   useEffect(() => {
     if (lesson) {
-      setFormData(lesson);
+      setFormData({
+        ...emptyLesson(courseId),
+        ...lesson,
+        title: lesson.title ?? "",
+        description: lesson.description ?? "",
+        duration: lesson.duration ?? 30,
+        tags: lesson.tags ?? [],
+        difficulty: lesson.difficulty ?? LessonDifficulty.BEGINNER,
+      });
     } else {
       setFormData(emptyLesson(courseId));
     }
@@ -152,7 +160,7 @@ export function LessonDetailsPanel({
               </Label>
               <Input
                 id="lessonTitle"
-                value={formData.title}
+                value={formData.title ?? ""}
                 onChange={(e) =>
                   setFormData({ ...formData, title: e.target.value })
                 }
@@ -168,7 +176,7 @@ export function LessonDetailsPanel({
               </Label>
               <Textarea
                 id="lessonDescription"
-                value={formData.description}
+                value={formData.description ?? ""}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
@@ -196,7 +204,7 @@ export function LessonDetailsPanel({
                   type="number"
                   min="1"
                   max="300"
-                  value={formData.duration}
+                  value={formData.duration ?? 30}
                   onChange={(e) =>
                     setFormData({
                       ...formData,
@@ -217,7 +225,7 @@ export function LessonDetailsPanel({
                   Difficulty
                 </Label>
                 <Select
-                  value={formData.difficulty}
+                  value={formData.difficulty ?? LessonDifficulty.BEGINNER}
                   onValueChange={(value) =>
                     setFormData({
                       ...formData,
