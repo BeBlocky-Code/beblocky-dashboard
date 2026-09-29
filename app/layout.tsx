@@ -4,7 +4,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { QueryProvider } from "@/components/providers/query-provider";
 
 export const metadata: Metadata = {
-  title: "BeBlocky Admin",
+  title: "BeBlocky Dashboard",
   description:
     "Build and edit courses, manage classes and bundles, and look up students.",
 };
