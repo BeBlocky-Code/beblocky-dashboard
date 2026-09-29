@@ -35,6 +35,8 @@ export const GC_TIMES = {
   SHORT: 10 * 60 * 1000, // 10 minutes
 } as const;
 
+export const QUERY_PERSIST_KEY = "beblocky-query-cache-v2";
+
 /**
  * Create a new QueryClient instance with sensible defaults
  */
@@ -98,7 +100,7 @@ export function setupQueryPersistence(queryClient: QueryClient): void {
   try {
     const persister = createSyncStoragePersister({
       storage: window.localStorage,
-      key: "beblocky-query-cache",
+      key: QUERY_PERSIST_KEY,
       // Throttle writes to localStorage
       throttleTime: 1000,
       // Serialize/deserialize functions (default JSON)
@@ -111,10 +113,10 @@ export function setupQueryPersistence(queryClient: QueryClient): void {
       persister,
       // Maximum age for persisted data (30 minutes)
       maxAge: 30 * 60 * 1000,
-      // Only persist certain query keys (optional - can be customized)
       dehydrateOptions: {
         shouldDehydrateQuery: (query) => {
-          // Persist all successful queries
+          // Never persist auth — a previous Account's roles would hydrate as this one.
+          if (query.queryKey[0] === "session") return false;
           return query.state.status === "success";
         },
       },
@@ -137,4 +139,14 @@ export function invalidateAllQueries(queryClient: QueryClient): void {
  */
 export function clearQueryCache(queryClient: QueryClient): void {
   queryClient.clear();
+}
+
+/** Drop in-memory and persisted caches so the next Account cannot inherit the last one's session. */
+export function clearClientCaches(queryClient?: QueryClient): void {
+  queryClient?.clear();
+  try {
+    window.localStorage.removeItem(QUERY_PERSIST_KEY);
+  } catch {
+    /* ignore */
+  }
 }
