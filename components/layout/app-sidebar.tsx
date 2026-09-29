@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import Image from "next/image";
 import {
   BookOpen,
+  Building2,
   ChevronsLeft,
   ChevronsRight,
   GraduationCap,
@@ -33,10 +34,11 @@ import iconLogo from "@/lib/images/icon-logo.png";
 const SIDEBAR_COLLAPSED_KEY = "beblocky-dashboard-sidebar-collapsed";
 
 const navItems = [
-  { href: "/courses", label: "Courses", icon: BookOpen },
-  { href: "/bundles", label: "Bundles", icon: Package },
-  { href: "/classes", label: "Classes", icon: Users },
-  { href: "/admin/students", label: "Students", icon: GraduationCap },
+  { href: "/courses", label: "Courses", icon: BookOpen, roles: ["teacher", "admin", "organization"] },
+  { href: "/bundles", label: "Bundles", icon: Package, roles: ["teacher", "admin"] },
+  { href: "/classes", label: "Classes", icon: Users, roles: ["teacher", "organization"] },
+  { href: "/admin/organizations", label: "Organizations", icon: Building2, roles: ["admin"] },
+  { href: "/admin/students", label: "Students", icon: GraduationCap, roles: ["teacher", "admin", "organization"] },
 ] as const;
 
 function getInitials(name: string) {
@@ -58,7 +60,8 @@ function SidebarChrome({
 }) {
   const pathname = usePathname();
   const { theme, toggleTheme } = useThemeContext();
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, session } = useAuth();
+  const roles = session?.user?.roles ?? [];
   // Session fetch can resolve on client before hydrate matches SSR — defer
   // user-specific avatar/label until mount to avoid Avatar hydration mismatches.
   const [mounted, setMounted] = useState(false);
@@ -142,7 +145,13 @@ function SidebarChrome({
       )}
 
       <nav className="flex-1 space-y-1 overflow-y-auto p-2">
-        {navItems.map(({ href, label, icon: Icon }) => {
+        {navItems
+          .filter((item) =>
+            roles.length === 0
+              ? item.href !== "/admin/organizations"
+              : item.roles.some((role) => roles.includes(role)),
+          )
+          .map(({ href, label, icon: Icon }) => {
           const active = isActive(href);
           const link = (
             <Link
