@@ -61,10 +61,44 @@ export const organizationApi = {
     }
   },
 
+  async byAccount(accountId: string): Promise<IOrganization> {
+    return apiFetch<IOrganization>(`/organizations/user/${accountId}`);
+  },
+
   async list(): Promise<IOrganization[]> {
     const data = await apiFetch<IOrganization[] | { data: IOrganization[] }>(
       "/organizations",
     );
     return Array.isArray(data) ? data : data.data ?? [];
+  },
+
+  async createSchool(name: string, email: string): Promise<IOrganization> {
+    return apiFetch<IOrganization>("/organizations/schools", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, email }),
+    });
+  },
+
+  async inviteTeacher(
+    organizationId: string,
+    teacherId: string,
+  ): Promise<unknown> {
+    return apiFetch(`/organizations/${organizationId}/teachers`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ teacherId }),
+    });
+  },
+
+  async school(organizationId: string): Promise<{
+    id: string;
+    name: string;
+    teachers: Array<{ id: string; accountId: string }>;
+    roster: string[];
+    courses: string[];
+    classes: Array<{ id: string; name: string }>;
+  }> {
+    return apiFetch(`/organizations/${organizationId}/school`);
   },
 };

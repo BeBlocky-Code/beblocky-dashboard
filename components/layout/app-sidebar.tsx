@@ -35,6 +35,7 @@ const SIDEBAR_COLLAPSED_KEY = "beblocky-dashboard-sidebar-collapsed";
 
 const navItems = [
   { href: "/courses", label: "Courses", icon: BookOpen, roles: ["teacher", "admin", "organization"] },
+  { href: "/school", label: "School", icon: Building2, roles: ["teacher", "organization"] },
   { href: "/bundles", label: "Bundles", icon: Package, roles: ["teacher", "admin"] },
   { href: "/classes", label: "Classes", icon: Users, roles: ["teacher", "organization"] },
   { href: "/admin/organizations", label: "Organizations", icon: Building2, roles: ["admin"] },
