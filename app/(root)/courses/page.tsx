@@ -2,7 +2,10 @@
 
 import { useMemo } from "react";
 import { useSession } from "@/lib/auth-client";
-import { useUserByEmail, useTeacherByUserId } from "@/lib/hooks/queries";
+import {
+  useUserByEmail,
+  useTeacherByUserId,
+} from "@/lib/hooks/queries";
 import ModernCourseDashboard from "@/components/courses/modern-course-dashboard";
 import { OrganizationRequirementMessage } from "@/components/courses/organization-requirement-message";
 import { CoursesPageSkeleton } from "@/components/skeletons";
@@ -34,18 +37,19 @@ export default function CoursesPage() {
   });
 
   const canManageCourses = isTeacherOrAdminRole(userData?.role, sessionRoles);
+  const staffRoleLabel =
+    sessionRoles?.includes("teacher") || userData?.role === "teacher"
+      ? "teacher"
+      : sessionRoles?.includes("admin") || userData?.role === "admin"
+        ? "admin"
+        : "teacher";
 
-  // Fetch teacher data using TanStack Query (only for teachers/admins)
   const {
     data: teacherData,
     isLoading: isTeacherLoading,
     error: teacherError,
   } = useTeacherByUserId(sessionUserId, userData ?? null, {
-    enabled:
-      !session.isPending &&
-      !!sessionUserId &&
-      !!userData &&
-      canManageCourses,
+    enabled: !session.isPending && !!sessionUserId && canManageCourses,
   });
 
   // Compute organization status
@@ -92,28 +96,17 @@ export default function CoursesPage() {
   // Determine loading state
   const isLoading =
     session.isPending ||
-    isUserLoading ||
+    (!sessionRoles?.length && isUserLoading && !isUserError) ||
     (canManageCourses && isTeacherLoading);
 
-  // Show loading state while data is being fetched
   if (isLoading || (canManageCourses && hasOrganization === null)) {
     return <CoursesPageSkeleton />;
   }
 
-  // Nest user profile missing — still allow catalog for students; teachers need provisioning
-  if (isUserError && canManageCourses) {
-    return (
-      <OrganizationRequirementMessage
-        userRole={sessionRoles?.includes("admin") ? "admin" : "teacher"}
-      />
-    );
-  }
-
-  // Only render organization requirement if we have complete data and user is teacher/admin without organization
   if (canManageCourses && hasOrganization === false) {
     return (
       <OrganizationRequirementMessage
-        userRole={userData?.role ?? "teacher"}
+        userRole={staffRoleLabel}
         organizationId={teacherData?.organizationId?.toString()}
       />
     );

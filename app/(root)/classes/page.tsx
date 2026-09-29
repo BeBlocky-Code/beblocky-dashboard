@@ -55,7 +55,7 @@ export default function ModernClassesPage() {
       : userData?.role === "teacher") ?? false;
 
   useTeacherByUserId(session.data?.user?.id ?? userData?._id, userData ?? null, {
-    enabled: !!userData && isTeacher,
+    enabled: isTeacher && !!(session.data?.user?.id ?? userData?._id),
   });
 
   const {

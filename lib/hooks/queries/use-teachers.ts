@@ -25,10 +25,10 @@ export function useTeacherByUserId(
 ) {
   return useQuery({
     queryKey: queryKeys.teachers.byUserId(userId ?? ""),
-    queryFn: () => teacherApi.getTeacherByUserId(userId!, user!),
+    queryFn: () => teacherApi.getTeacherByUserId(userId!, user ?? ({} as IUser)),
     staleTime: STALE_TIMES.USER,
     gcTime: GC_TIMES.MEDIUM,
-    enabled: options?.enabled !== false && !!userId && !!user,
+    enabled: options?.enabled !== false && !!userId,
     // Don't throw on 404 - teacher might not exist yet
     retry: (failureCount, error) => {
       if (error instanceof Error && error.message === "Teacher not found") {
