@@ -110,9 +110,7 @@ export function AppSidebar() {
     path === href || path.startsWith(`${href}/`);
 
   const visibleItems = navItems.filter((item) =>
-    roles.some((role) =>
-      item.roles.includes(role as (typeof item.roles)[number]),
-    ),
+    item.roles.some((allowed) => roles.includes(allowed)),
   );
 
   return (
