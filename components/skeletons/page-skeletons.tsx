@@ -313,6 +313,99 @@ export function AdminStudentsSkeleton() {
   );
 }
 
+/** `/admin/organizations` — hero, invite form, org cards. */
+export function AdminOrganizationsSkeleton() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted">
+      <div className="container mx-auto px-6 py-8">
+        <div className="relative mb-8 overflow-hidden rounded-3xl bg-gradient-to-r from-primary/10 via-primary/5 to-secondary/10 p-8">
+          <div className="space-y-3">
+            <Skeleton className="h-8 w-56" />
+            <Skeleton className="h-4 w-80 max-w-full" />
+          </div>
+        </div>
+
+        <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <StatCardSkeleton key={i} />
+          ))}
+        </div>
+
+        <Card className="mb-6 rounded-2xl border border-border/40 bg-card/40 p-5 shadow-sm backdrop-blur-sm">
+          <Skeleton className="mb-4 h-6 w-48" />
+          <div className="flex flex-col gap-3 md:flex-row">
+            <Skeleton className="h-10 flex-1 rounded-md" />
+            <Skeleton className="h-10 flex-1 rounded-md" />
+            <Skeleton className="h-10 w-full rounded-md md:w-28" />
+          </div>
+        </Card>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Card
+              key={i}
+              className="rounded-2xl border border-border/40 bg-card/40 p-5 shadow-sm backdrop-blur-sm"
+            >
+              <div className="mb-4 flex items-start justify-between gap-3">
+                <Skeleton className="h-11 w-11 rounded-2xl" />
+                <Skeleton className="h-5 w-16 rounded-full" />
+              </div>
+              <Skeleton className="h-5 w-2/3" />
+              <Skeleton className="mt-2 h-4 w-1/2" />
+            </Card>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** `/school` — hero, invite form, four school panels. */
+export function SchoolPageSkeleton() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted">
+      <div className="container mx-auto px-6 py-8">
+        <div className="relative mb-8 overflow-hidden rounded-3xl bg-gradient-to-r from-primary/10 via-primary/5 to-secondary/10 p-8">
+          <div className="space-y-3">
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-4 w-72 max-w-full" />
+          </div>
+        </div>
+
+        <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <StatCardSkeleton key={i} />
+          ))}
+        </div>
+
+        <Card className="mb-6 rounded-2xl border border-border/40 bg-card/40 p-5 shadow-sm backdrop-blur-sm">
+          <Skeleton className="mb-4 h-6 w-40" />
+          <div className="flex flex-col gap-3 md:flex-row">
+            <Skeleton className="h-10 flex-1 rounded-md" />
+            <Skeleton className="h-10 w-full rounded-md md:w-28" />
+          </div>
+        </Card>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Card
+              key={i}
+              className="rounded-2xl border border-border/40 bg-card/40 p-5 shadow-sm backdrop-blur-sm"
+            >
+              <Skeleton className="mb-4 h-6 w-28" />
+              <div className="space-y-3">
+                {Array.from({ length: 4 }).map((_, row) => (
+                  <Skeleton key={row} className="h-10 w-full rounded-lg" />
+                ))}
+              </div>
+            </Card>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /** `/courses/new` and edit workspace — split pane shell. */
 export function CourseWorkspaceSkeleton() {
   return (

@@ -4,5 +4,7 @@ export {
   ClassDetailSkeleton,
   BundlesPageSkeleton,
   AdminStudentsSkeleton,
+  AdminOrganizationsSkeleton,
+  SchoolPageSkeleton,
   CourseWorkspaceSkeleton,
 } from "./page-skeletons";
