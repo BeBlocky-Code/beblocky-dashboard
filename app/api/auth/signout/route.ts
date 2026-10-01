@@ -1,17 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import { authAppUrl, authServiceUrl } from "@/lib/app-urls";
 
-const AUTH_SERVICE_URL =
-  process.env.NEXT_PUBLIC_AUTH_SERVICE_URL ??
-  (process.env.NODE_ENV === "production"
-    ? "https://auth-service.beblocky.com"
-    : "http://localhost:8080");
+const AUTH_SERVICE_URL = authServiceUrl();
 const AUTH_BASE = AUTH_SERVICE_URL.replace(/\/$/, "") + "/api/v1";
 
-const AUTH_APP_URL =
-  process.env.NEXT_PUBLIC_AUTH_APP_URL ??
-  (process.env.NODE_ENV === "production"
-    ? "https://auth.beblocky.com"
-    : "http://localhost:3000");
+const AUTH_APP_URL = authAppUrl();
 
 function getIsSecure(request: NextRequest) {
   // NextRequest.nextUrl.protocol is usually enough, but fall back to forwarded proto.

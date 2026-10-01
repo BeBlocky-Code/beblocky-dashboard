@@ -6,17 +6,10 @@ import {
   buildSessionCookieHeader,
   normalizeSessionToken,
 } from "@/lib/auth-callback";
+import { authAppUrl, authServiceUrl } from "@/lib/app-urls";
 
-const AUTH_APP_URL =
-  process.env.NEXT_PUBLIC_AUTH_APP_URL ??
-  (process.env.NODE_ENV === "production"
-    ? "https://auth.beblocky.com"
-    : "http://localhost:3000");
-const AUTH_SERVICE_URL =
-  process.env.NEXT_PUBLIC_AUTH_SERVICE_URL ??
-  (process.env.NODE_ENV === "production"
-    ? "https://auth-service.beblocky.com"
-    : "http://localhost:8080");
+const AUTH_APP_URL = authAppUrl();
+const AUTH_SERVICE_URL = authServiceUrl();
 
 const publicPaths = ["/sign-in", "/sign-up"];
 

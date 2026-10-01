@@ -1,11 +1,9 @@
+import { clientAppUrl } from "@/lib/app-urls";
+
 const LEARNER_ROLES = ["student", "parent"] as const;
 const STAFF_ROLES = ["teacher", "admin", "organization"] as const;
 
-export const CLIENT_APP_URL =
-  process.env.NEXT_PUBLIC_CLIENT_APP_URL ??
-  (process.env.NODE_ENV === "production"
-    ? "https://code.beblocky.com"
-    : "http://localhost:3002");
+export const CLIENT_APP_URL = clientAppUrl();
 
 export function hasLearnerRole(roles: string[]): boolean {
   return roles.some((role) =>

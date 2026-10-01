@@ -3,12 +3,9 @@
 import { Suspense, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { buildAuthRedirectUrl, resolveAppCallbackUrl } from "@/lib/auth-callback";
+import { authAppUrl } from "@/lib/app-urls";
 
-const AUTH_APP_URL =
-  process.env.NEXT_PUBLIC_AUTH_APP_URL ??
-  (process.env.NODE_ENV === "production"
-    ? "https://auth.beblocky.com"
-    : "http://localhost:3000");
+const AUTH_APP_URL = authAppUrl();
 
 function SignInRedirect() {
   const searchParams = useSearchParams();

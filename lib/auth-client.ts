@@ -1,8 +1,6 @@
-const AUTH_SERVICE_URL =
-  process.env.NEXT_PUBLIC_AUTH_SERVICE_URL ??
-  (process.env.NODE_ENV === "production"
-    ? "https://auth-service.beblocky.com"
-    : "http://localhost:8080");
+import { authServiceUrl } from "@/lib/app-urls";
+
+const AUTH_SERVICE_URL = authServiceUrl();
 const AUTH_BASE = AUTH_SERVICE_URL.replace(/\/$/, "") + "/api/v1";
 
 export type SessionUser = {

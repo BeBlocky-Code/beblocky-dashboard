@@ -1,9 +1,21 @@
 import type { NextRequest } from "next/server";
+import {
+  authAppUrl,
+  dashboardAppUrl,
+  isLoopbackHostname,
+} from "@/lib/app-urls";
 
 const AUTH_QUERY_PARAMS = ["callbackUrl", "origin", "token"] as const;
 
-const DEFAULT_DASHBOARD_URL =
-  process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3002";
+const DEFAULT_DASHBOARD_URL = dashboardAppUrl();
+
+function isUsableLanding(url: URL, authOrigin: string): boolean {
+  if (url.origin === authOrigin) return false;
+  if (process.env.NODE_ENV === "production" && isLoopbackHostname(url.hostname)) {
+    return false;
+  }
+  return true;
+}
 
 /**
  * Session tokens are URL-safe base64 and often end with "=".
@@ -83,7 +95,7 @@ export function buildCallbackUrl(
     const unwrapped = unwrapCallbackUrl(existing);
     try {
       const url = new URL(unwrapped);
-      if (url.origin !== authOrigin) {
+      if (isUsableLanding(url, authOrigin)) {
         stripAuthQueryParams(url);
         const qs = url.searchParams.toString();
         return `${url.origin}${url.pathname}${qs ? `?${qs}` : ""}`;
@@ -134,11 +146,9 @@ export function resolveAppCallbackUrl(callbackPath: string): string {
   const appBase = DEFAULT_DASHBOARD_URL.replace(/\/$/, "");
   const authOrigin = (() => {
     try {
-      return new URL(
-        process.env.NEXT_PUBLIC_AUTH_APP_URL ?? "http://localhost:3000"
-      ).origin;
+      return new URL(authAppUrl()).origin;
     } catch {
-      return "http://localhost:3000";
+      return "https://auth.beblocky.com";
     }
   })();
 
@@ -146,7 +156,7 @@ export function resolveAppCallbackUrl(callbackPath: string): string {
     const unwrapped = unwrapCallbackUrl(callbackPath);
     try {
       const url = new URL(unwrapped);
-      if (url.origin === authOrigin) {
+      if (!isUsableLanding(url, authOrigin)) {
         return `${appBase}/courses`;
       }
       stripAuthQueryParams(url);
