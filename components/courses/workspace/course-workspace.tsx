@@ -44,6 +44,16 @@ import { CourseWorkspaceSidebar } from "./course-workspace-sidebar";
 import { CourseDetailsPanel } from "./panels/course-details-panel";
 import { LessonDetailsPanel } from "./panels/lesson-details-panel";
 import { SlideEditorPanel } from "./panels/slide-editor-panel";
+import { ChallengeEditorPanel } from "./panels/challenge-editor-panel";
+import {
+  createChallenge,
+  deleteChallenge,
+  listAuthoringChallenges,
+  reorderChallenges,
+  updateChallenge,
+  type AuthoringChallenge,
+  type ChallengeWriteBody,
+} from "@/lib/api/challenge";
 
 interface CourseWorkspaceProps {
   mode: "create" | "edit";
@@ -54,8 +64,10 @@ type WorkspaceSession = {
   activeTab: WorkspaceTab;
   selectedLessonId: string | null;
   selectedSlideId: string | null;
+  selectedChallengeId: string | null;
   isCreatingLesson: boolean;
   isCreatingSlide: boolean;
+  isCreatingChallenge: boolean;
 };
 
 function workspaceSessionKey(mode: string, courseId?: string) {
@@ -105,6 +117,7 @@ export function CourseWorkspace({ mode, courseId }: CourseWorkspaceProps) {
   const [course, setCourse] = useState<ClientCourse | null>(null);
   const [lessons, setLessons] = useState<ILesson[]>([]);
   const [slides, setSlides] = useState<ISlide[]>([]);
+  const [challenges, setChallenges] = useState<AuthoringChallenge[]>([]);
   const [activeTab, setActiveTab] = useState<WorkspaceTab>(
     restored?.activeTab || "course"
   );
@@ -114,11 +127,17 @@ export function CourseWorkspace({ mode, courseId }: CourseWorkspaceProps) {
   const [selectedSlideId, setSelectedSlideId] = useState<string | null>(
     restored?.selectedSlideId ?? null
   );
+  const [selectedChallengeId, setSelectedChallengeId] = useState<string | null>(
+    restored?.selectedChallengeId ?? null
+  );
   const [isCreatingLesson, setIsCreatingLesson] = useState(
     restored?.isCreatingLesson ?? false
   );
   const [isCreatingSlide, setIsCreatingSlide] = useState(
     restored?.isCreatingSlide ?? false
+  );
+  const [isCreatingChallenge, setIsCreatingChallenge] = useState(
+    restored?.isCreatingChallenge ?? false
   );
   const [isLoading, setIsLoading] = useState(mode === "edit");
   const [isSaving, setIsSaving] = useState(false);
@@ -144,6 +163,18 @@ export function CourseWorkspace({ mode, courseId }: CourseWorkspaceProps) {
         setLessons(data.lessons);
         setSlides(data.slides);
 
+        const challengeLists = await Promise.all(
+          data.lessons.map((lesson) => {
+            const id = lesson._id?.toString();
+            if (!id) return Promise.resolve([] as AuthoringChallenge[]);
+            return listAuthoringChallenges(courseId, id).catch(
+              () => [] as AuthoringChallenge[]
+            );
+          })
+        );
+        const allChallenges = challengeLists.flat();
+        setChallenges(allChallenges);
+
         const saved = readWorkspaceSession(mode, courseId);
         const lessonIds = new Set(
           data.lessons.map((l) => l._id?.toString()).filter(Boolean)
@@ -151,6 +182,7 @@ export function CourseWorkspace({ mode, courseId }: CourseWorkspaceProps) {
         const slideIds = new Set(
           data.slides.map((s) => s._id?.toString()).filter(Boolean)
         );
+        const challengeIds = new Set(allChallenges.map((c) => c.id));
 
         if (saved?.activeTab) setActiveTab(saved.activeTab);
         if (saved?.selectedLessonId && lessonIds.has(saved.selectedLessonId)) {
@@ -163,8 +195,17 @@ export function CourseWorkspace({ mode, courseId }: CourseWorkspaceProps) {
         } else if (data.slides[0]?._id) {
           setSelectedSlideId(data.slides[0]._id.toString());
         }
+        if (
+          saved?.selectedChallengeId &&
+          challengeIds.has(saved.selectedChallengeId)
+        ) {
+          setSelectedChallengeId(saved.selectedChallengeId);
+        } else if (allChallenges[0]?.id) {
+          setSelectedChallengeId(allChallenges[0].id);
+        }
         setIsCreatingLesson(Boolean(saved?.isCreatingLesson));
         setIsCreatingSlide(Boolean(saved?.isCreatingSlide));
+        setIsCreatingChallenge(Boolean(saved?.isCreatingChallenge));
       } catch (error) {
         console.error("Error fetching course data:", error);
         toast.error("Failed to load course data");
@@ -184,8 +225,10 @@ export function CourseWorkspace({ mode, courseId }: CourseWorkspaceProps) {
       activeTab,
       selectedLessonId,
       selectedSlideId,
+      selectedChallengeId,
       isCreatingLesson,
       isCreatingSlide,
+      isCreatingChallenge,
     });
   }, [
     sessionHydrated,
@@ -195,13 +238,15 @@ export function CourseWorkspace({ mode, courseId }: CourseWorkspaceProps) {
     activeTab,
     selectedLessonId,
     selectedSlideId,
+    selectedChallengeId,
     isCreatingLesson,
     isCreatingSlide,
+    isCreatingChallenge,
   ]);
 
   const handleTabChange = (tab: WorkspaceTab) => {
     if (contentLocked && tab !== "course") {
-      toast.error("Save the course first to manage lessons and slides");
+      toast.error("Save the course first to manage lessons, slides, and challenges");
       return;
     }
     setActiveTab(tab);
@@ -304,6 +349,7 @@ export function CourseWorkspace({ mode, courseId }: CourseWorkspaceProps) {
       setLessons((prev) =>
         prev.filter((l) => l._id?.toString() !== lessonId)
       );
+      setChallenges((prev) => prev.filter((c) => c.lessonId !== lessonId));
       setCourse((prev) =>
         prev
           ? { ...prev, lessonsCount: Math.max(0, (prev.lessonsCount || 0) - 1) }
@@ -443,6 +489,68 @@ export function CourseWorkspace({ mode, courseId }: CourseWorkspaceProps) {
     }
   };
 
+  const replaceLessonChallenges = (
+    lessonId: string,
+    rows: AuthoringChallenge[]
+  ) => {
+    setChallenges((prev) => [
+      ...prev.filter((c) => c.lessonId !== lessonId),
+      ...rows,
+    ]);
+  };
+
+  const handleSaveChallenge = async (
+    body: ChallengeWriteBody,
+    lessonId: string
+  ) => {
+    if (!resolvedCourseId) return;
+    setIsSaving(true);
+    try {
+      if (isCreatingChallenge || !selectedChallengeId) {
+        await createChallenge(resolvedCourseId, lessonId, body);
+        const rows = await listAuthoringChallenges(resolvedCourseId, lessonId);
+        replaceLessonChallenges(lessonId, rows);
+        const newest = [...rows].sort((a, b) => b.order - a.order)[0];
+        setIsCreatingChallenge(false);
+        setSelectedChallengeId(newest?.id ?? null);
+        setSelectedLessonId(lessonId);
+        toast.success("Challenge created successfully!");
+      } else {
+        const updated = await updateChallenge(selectedChallengeId, body);
+        setChallenges((prev) =>
+          prev.map((c) => (c.id === updated.id ? updated : c))
+        );
+        toast.success("Challenge updated successfully!");
+      }
+    } catch (error) {
+      console.error("Error saving challenge:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Failed to save challenge"
+      );
+      throw error;
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeleteChallenge = async (challengeId: string) => {
+    if (!confirm("Delete this challenge?")) return;
+    try {
+      await deleteChallenge(challengeId);
+      setChallenges((prev) => prev.filter((c) => c.id !== challengeId));
+      if (selectedChallengeId === challengeId) {
+        setSelectedChallengeId(null);
+        setIsCreatingChallenge(false);
+      }
+      toast.success("Challenge deleted successfully!");
+    } catch (error) {
+      console.error("Error deleting challenge:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Failed to delete challenge"
+      );
+    }
+  };
+
   if (isLoading) {
     return <CourseWorkspaceSkeleton />;
   }
@@ -455,6 +563,8 @@ export function CourseWorkspace({ mode, courseId }: CourseWorkspaceProps) {
     lessons.find((l) => l._id?.toString() === selectedLessonId) || null;
   const selectedSlide =
     slides.find((s) => s._id?.toString() === selectedSlideId) || null;
+  const selectedChallenge =
+    challenges.find((c) => c.id === selectedChallengeId) || null;
 
   return (
     <div className="h-[calc(100dvh-3.5rem)] md:h-dvh min-h-[600px] flex flex-col bg-muted/10">
@@ -490,7 +600,9 @@ export function CourseWorkspace({ mode, courseId }: CourseWorkspaceProps) {
               value={activeTab}
               onChange={handleTabChange}
               disabledTabs={
-                contentLocked ? (["lessons", "slides"] as WorkspaceTab[]) : []
+                contentLocked
+                  ? (["lessons", "slides", "challenges"] as WorkspaceTab[])
+                  : []
               }
             />
           </div>
@@ -519,10 +631,13 @@ export function CourseWorkspace({ mode, courseId }: CourseWorkspaceProps) {
             course={course}
             lessons={lessons}
             slides={slides}
+            challenges={challenges}
             selectedLessonId={selectedLessonId}
             selectedSlideId={selectedSlideId}
+            selectedChallengeId={selectedChallengeId}
             isCreatingLesson={isCreatingLesson}
             isCreatingSlide={isCreatingSlide}
+            isCreatingChallenge={isCreatingChallenge}
             contentLocked={contentLocked}
             isSavingOrder={isSavingOrder}
             onSelectLesson={(id) => {
@@ -533,6 +648,12 @@ export function CourseWorkspace({ mode, courseId }: CourseWorkspaceProps) {
               setIsCreatingSlide(false);
               setSelectedSlideId(id);
             }}
+            onSelectChallenge={(id) => {
+              setIsCreatingChallenge(false);
+              setSelectedChallengeId(id);
+              const challenge = challenges.find((c) => c.id === id);
+              if (challenge) setSelectedLessonId(challenge.lessonId);
+            }}
             onAddLesson={() => {
               setIsCreatingLesson(true);
               setSelectedLessonId(null);
@@ -541,8 +662,14 @@ export function CourseWorkspace({ mode, courseId }: CourseWorkspaceProps) {
               setIsCreatingSlide(true);
               setSelectedSlideId(null);
             }}
+            onAddChallenge={(lessonId) => {
+              setIsCreatingChallenge(true);
+              setSelectedChallengeId(null);
+              if (lessonId) setSelectedLessonId(lessonId);
+            }}
             onDeleteLesson={handleDeleteLesson}
             onDeleteSlide={handleDeleteSlide}
+            onDeleteChallenge={handleDeleteChallenge}
             onSaveSlideOrder={async (lessonId, orderedSlideIds) => {
               setIsSavingOrder(true);
               try {
@@ -587,6 +714,35 @@ export function CourseWorkspace({ mode, courseId }: CourseWorkspaceProps) {
                   error instanceof Error
                     ? error.message
                     : "Failed to save slide order"
+                );
+              } finally {
+                setIsSavingOrder(false);
+              }
+            }}
+            onSaveChallengeOrder={async (lessonId, orderedChallengeIds) => {
+              setIsSavingOrder(true);
+              try {
+                await reorderChallenges(
+                  resolvedCourseId,
+                  lessonId,
+                  orderedChallengeIds
+                );
+                setChallenges((prev) =>
+                  prev.map((challenge) => {
+                    if (challenge.lessonId !== lessonId) return challenge;
+                    const index = orderedChallengeIds.indexOf(challenge.id);
+                    return index >= 0
+                      ? { ...challenge, order: index }
+                      : challenge;
+                  })
+                );
+                toast.success("Challenge order saved");
+              } catch (error) {
+                console.error(error);
+                toast.error(
+                  error instanceof Error
+                    ? error.message
+                    : "Failed to save challenge order"
                 );
               } finally {
                 setIsSavingOrder(false);
@@ -666,6 +822,40 @@ export function CourseWorkspace({ mode, courseId }: CourseWorkspaceProps) {
                   }}
                   disabled={lessons.length === 0}
                   disabledHint="Create a lesson before adding slides."
+                />
+              )}
+            </>
+          )}
+
+          {activeTab === "challenges" && (
+            <>
+              {isCreatingChallenge || selectedChallenge ? (
+                <ChallengeEditorPanel
+                  mode={isCreatingChallenge ? "create" : "edit"}
+                  challenge={isCreatingChallenge ? null : selectedChallenge}
+                  courseId={resolvedCourseId}
+                  lessons={lessons}
+                  defaultLessonId={selectedLessonId}
+                  isSaving={isSaving}
+                  onSave={handleSaveChallenge}
+                  onCancelCreate={() => {
+                    setIsCreatingChallenge(false);
+                    if (challenges[0]?.id) {
+                      setSelectedChallengeId(challenges[0].id);
+                    }
+                  }}
+                />
+              ) : (
+                <EmptyCanvas
+                  title="Select a challenge"
+                  description="Choose a challenge from the sidebar, or create a new one."
+                  actionLabel="Add Challenge"
+                  onAction={() => {
+                    setIsCreatingChallenge(true);
+                    setSelectedChallengeId(null);
+                  }}
+                  disabled={lessons.length === 0}
+                  disabledHint="Create a lesson before adding challenges."
                 />
               )}
             </>
