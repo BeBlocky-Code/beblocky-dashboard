@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { normalizeSessionToken } from "@/lib/auth-callback";
+import { fetchSameHost } from "@/lib/server/same-host-fetch";
 
 type StudentIdentity = {
   userId?: string;
@@ -68,22 +69,37 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ message: "Not authenticated" }, { status: 401 });
   }
 
-  const response = await fetch(`${apiUrl.replace(/\/$/, "")}/students`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: "application/json",
-    },
-    cache: "no-store",
-  });
-
-  if (!response.ok) {
+  let result: { status: number; body: string };
+  try {
+    result = await fetchSameHost(`${apiUrl.replace(/\/$/, "")}/students`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
+      },
+    });
+  } catch {
     return NextResponse.json(
-      { message: `Failed to load students: ${response.status}` },
-      { status: response.status }
+      { message: "Failed to load students: 502" },
+      { status: 502 },
     );
   }
 
-  const data = await response.json();
+  if (result.status < 200 || result.status >= 300) {
+    return NextResponse.json(
+      { message: `Failed to load students: ${result.status}` },
+      { status: result.status },
+    );
+  }
+
+  let data: unknown;
+  try {
+    data = JSON.parse(result.body);
+  } catch {
+    return NextResponse.json(
+      { message: "Failed to load students: 502" },
+      { status: 502 },
+    );
+  }
   const students = Array.isArray(data) ? data.map(withIdentity) : [];
   return NextResponse.json(students);
 }
