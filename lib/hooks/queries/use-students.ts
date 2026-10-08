@@ -8,8 +8,7 @@ import type { IUser } from "@/types/user";
 
 /**
  * Hook to fetch all students (admin only).
- * Uses /api/admin/students which forwards the session as Bearer and returns
- * rows with name, email, and displayName resolved from auth-service.
+ * Calls Nest GET /students with Bearer. Name/email come from auth-service.
  */
 export function useAllStudents(options?: { enabled?: boolean }) {
   return useQuery({

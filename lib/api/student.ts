@@ -1,6 +1,10 @@
 import type { IStudent } from "@/types/student";
 import type { IUser } from "@/types/user";
 import { apiFetch, ApiError } from "@/lib/api/utils";
+import {
+  ADMIN_STUDENT_LIST_PATH,
+  withIdentity,
+} from "@/lib/api/student-identity";
 
 export const studentApi = {
   async getStudentByEmail(email: string, _user: IUser): Promise<IStudent> {
@@ -36,19 +40,20 @@ export const studentApi = {
   },
 
   /**
-   * Admin list. Goes through the app route so the httpOnly session cookie can
-   * be forwarded as Bearer, and so name/email/displayName are normalized.
+   * Admin list. Browser → Nest with Bearer, same as Courses.
+   * Do not proxy this through Next.js: the public API hostname hairpins
+   * from the dashboard container and returns 502.
    */
   async getAllStudents(): Promise<IStudent[]> {
-    const response = await fetch("/api/admin/students", {
-      credentials: "include",
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to load students: ${response.status}`);
+    try {
+      const data = await apiFetch<IStudent[]>(ADMIN_STUDENT_LIST_PATH);
+      const rows = Array.isArray(data) ? data : [];
+      return rows.map(withIdentity);
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw new Error(`Failed to load students: ${error.status}`);
+      }
+      throw error;
     }
-
-    const data = await response.json();
-    return Array.isArray(data) ? data : [];
   },
 };

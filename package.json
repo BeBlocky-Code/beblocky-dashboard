@@ -11,7 +11,7 @@
     "build": "next build",
     "start": "next start -H 0.0.0.0",
     "lint": "eslint .",
-    "test": "node --experimental-strip-types --test lib/courses/organization-association.test.ts"
+    "test": "node --experimental-strip-types --test lib/courses/organization-association.test.ts lib/api/student-identity.test.ts"
   },
   "dependencies": {
     "@emotion/is-prop-valid": "^1.4.0",

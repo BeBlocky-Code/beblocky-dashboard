@@ -116,8 +116,8 @@ export async function getSession(): Promise<{
 
 /**
  * Headers for calling beblocky-api endpoints protected by BearerAuthGuard.
- * Prefer same-origin Next.js proxies for list endpoints that return PII when
- * the session cookie is host-only (cross-origin cookies won't be sent).
+ * Send Bearer from the Session. Do not proxy public API hostnames through
+ * Next.js on the shared host — that hairpins and 502s.
  */
 export async function getApiAuthHeaders(): Promise<Record<string, string>> {
   const { data: session } = await getSession();

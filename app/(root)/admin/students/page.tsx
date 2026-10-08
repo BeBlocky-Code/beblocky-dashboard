@@ -162,7 +162,7 @@ export default function AdminStudentsPage() {
     return rawStudents.map((student) => {
       const userId = String(student.userId ?? "");
       const studentId = student._id ? String(student._id) : undefined;
-      // /api/admin/students normalizes name, email, and displayName from auth-service.
+      // Nest GET /students resolves name/email from auth-service.
       const name = student.name?.trim() || undefined;
       const email = student.email?.trim() || undefined;
       const displayName =
