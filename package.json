@@ -10,7 +10,8 @@
     "dev": "next dev -p 3003",
     "build": "next build",
     "start": "next start -H 0.0.0.0",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "test": "node --experimental-strip-types --test lib/courses/organization-association.test.ts"
   },
   "dependencies": {
     "@emotion/is-prop-valid": "^1.4.0",

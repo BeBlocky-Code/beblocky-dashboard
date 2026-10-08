@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
 import { useSession } from "@/lib/auth-client";
 import {
   useUserByEmail,
@@ -10,17 +9,11 @@ import {
 import ModernCourseDashboard from "@/components/courses/modern-course-dashboard";
 import { OrganizationRequirementMessage } from "@/components/courses/organization-requirement-message";
 import { CoursesPageSkeleton } from "@/components/skeletons";
-
-function isTeacherOrAdminRole(
-  role: string | undefined,
-  roles: string[] | undefined
-) {
-  // Prefer IdP roles when present — Nest users can be stale legacy rows
-  if (roles && roles.length > 0) {
-    return roles.some((r) => r === "teacher" || r === "admin");
-  }
-  return role === "teacher" || role === "admin";
-}
+import {
+  accountRoles,
+  courseCatalogAccess,
+  teacherNeedsOrganization,
+} from "@/lib/courses/organization-association";
 
 export default function CoursesPage() {
   const session = useSession();
@@ -32,7 +25,6 @@ export default function CoursesPage() {
   // ModernCourseGrid reads after the gate.
   useCoursesWithDetails();
 
-  // Fetch user data using TanStack Query
   const {
     data: userData,
     isLoading: isUserLoading,
@@ -41,82 +33,40 @@ export default function CoursesPage() {
     enabled: !session.isPending && !!email,
   });
 
-  const canManageCourses = isTeacherOrAdminRole(userData?.role, sessionRoles);
-  const staffRoleLabel =
-    sessionRoles?.includes("teacher") || userData?.role === "teacher"
-      ? "teacher"
-      : sessionRoles?.includes("admin") || userData?.role === "admin"
-        ? "admin"
-        : "teacher";
+  const roles = accountRoles(sessionRoles, userData?.role);
+  const needsOrganization = teacherNeedsOrganization(roles);
 
   const {
     data: teacherData,
     isLoading: isTeacherLoading,
     error: teacherError,
   } = useTeacherByUserId(sessionUserId, userData ?? null, {
-    enabled: !session.isPending && !!sessionUserId && canManageCourses,
+    enabled: !session.isPending && !!sessionUserId && needsOrganization,
   });
 
-  // Compute organization status
-  const hasOrganization = useMemo(() => {
-    // Non-teachers can view the catalog without an org association
-    if (!canManageCourses) {
-      return true;
-    }
+  const access = courseCatalogAccess({
+    roles,
+    teacherLoading: isTeacherLoading,
+    teacher: teacherData,
+    teacherError,
+  });
 
-    // If teacher query errored with "Teacher not found", no organization
-    if (
-      teacherError instanceof Error &&
-      teacherError.message === "Teacher not found"
-    ) {
-      return false;
-    }
-
-    // If teacher data exists, check for organization
-    if (teacherData) {
-      return (
-        !!teacherData.organizationId ||
-        !!(teacherData as any).organization_id ||
-        !!(teacherData as any).organization ||
-        !!(teacherData as any).orgId ||
-        !!(teacherData as any).org_id
-      );
-    }
-
-    // If there was a non-404 error, allow access
-    if (
-      teacherError &&
-      !(
-        teacherError instanceof Error &&
-        teacherError.message === "Teacher not found"
-      )
-    ) {
-      return true;
-    }
-
-    // Still loading or undetermined
-    return null;
-  }, [canManageCourses, teacherData, teacherError]);
-
-  // Determine loading state
   const isLoading =
     session.isPending ||
     (!sessionRoles?.length && isUserLoading && !isUserError) ||
-    (canManageCourses && isTeacherLoading);
+    (needsOrganization && isTeacherLoading);
 
-  if (isLoading || (canManageCourses && hasOrganization === null)) {
+  if (isLoading || access === "pending") {
     return <CoursesPageSkeleton />;
   }
 
-  if (canManageCourses && hasOrganization === false) {
+  if (access === "require-organization") {
     return (
       <OrganizationRequirementMessage
-        userRole={staffRoleLabel}
         organizationId={teacherData?.organizationId?.toString()}
       />
     );
   }
 
-  // Show normal course dashboard for users with organization or non-teacher/admin users
   return <ModernCourseDashboard />;
 }

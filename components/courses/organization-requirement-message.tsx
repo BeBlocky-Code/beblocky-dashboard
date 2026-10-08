@@ -15,15 +15,12 @@ import {
 } from "lucide-react";
 
 interface OrganizationRequirementMessageProps {
-  userRole: string;
   organizationId?: string;
 }
 
 export function OrganizationRequirementMessage({
-  userRole,
   organizationId,
 }: OrganizationRequirementMessageProps) {
-  const isAdmin = userRole === "admin";
   const hasOrganization = !!organizationId;
 
   if (hasOrganization) {
@@ -55,9 +52,7 @@ export function OrganizationRequirementMessage({
               className="mb-4 bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950/30 dark:text-orange-400 dark:border-orange-800"
             >
               <Shield className="h-3 w-3 mr-1" />
-              {isAdmin
-                ? "Administrator Access Required"
-                : "Teacher Access Required"}
+              Teacher Access Required
             </Badge>
 
             <h1 className="text-4xl font-bold bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-slate-300 bg-clip-text text-transparent mb-4">
@@ -166,8 +161,7 @@ export function OrganizationRequirementMessage({
                         Provide Your Information
                       </h3>
                       <p className="text-sm text-muted-foreground">
-                        Share your email address and role (
-                        {isAdmin ? "Administrator" : "Teacher"}) with the
+                        Share your email address and role (Teacher) with the
                         organization.
                       </p>
                     </div>
