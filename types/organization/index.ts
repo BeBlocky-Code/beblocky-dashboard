@@ -1,4 +1,4 @@
-import { Types } from "mongoose";
+import { ObjectId } from "@/lib/object-id";
 
 export enum OrganizationType {
   SCHOOL = "school",
@@ -34,11 +34,11 @@ export interface IOrganization {
     phone: string;
     contactPerson: string;
   };
-  subscription?: Types.ObjectId;
-  teachers: Types.ObjectId[];
-  students: Types.ObjectId[];
-  courses: Types.ObjectId[];
-  classes: Types.ObjectId[];
+  subscription?: ObjectId;
+  teachers: ObjectId[];
+  students: ObjectId[];
+  courses: ObjectId[];
+  classes: ObjectId[];
   createdAt: Date;
   updatedAt: Date;
 }

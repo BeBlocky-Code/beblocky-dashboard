@@ -9,17 +9,40 @@ import { motion } from "framer-motion";
 import { ILesson } from "@/types/lesson";
 import { toast } from "sonner";
 import { ISlide } from "@/types/slide";
-import { Types } from "mongoose";
+import { ObjectId } from "@/lib/object-id";
 import ImagePickerDialog from "@/components/media/image-picker-dialog";
 import { uploadImages } from "@/lib/api/image";
-import {
-  SlideContentTab,
-  SlideInteractiveTab,
-  SlideCodeTab,
-  SlideThemeTab,
-  SlidePreview,
-} from "@/components/courses/dialogs/slide";
 import { cn } from "@/lib/utils";
+import dynamic from "next/dynamic";
+import { SlideContentTab } from "@/components/courses/dialogs/slide/slide-content-tab";
+import { SlideCodeTab } from "@/components/courses/dialogs/slide/slide-code-tab";
+import { SlideThemeTab } from "@/components/courses/dialogs/slide/slide-theme-tab";
+
+const SlideInteractiveTab = dynamic(
+  () =>
+    import("@/components/courses/dialogs/slide/slide-interactive-tab").then(
+      (mod) => mod.SlideInteractiveTab,
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="min-h-[28rem] rounded-xl bg-muted/30" aria-hidden />
+    ),
+  },
+);
+
+const SlidePreview = dynamic(
+  () =>
+    import("@/components/courses/dialogs/slide/slide-preview").then(
+      (mod) => mod.SlidePreview,
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="min-h-[28rem] rounded-xl bg-muted/30" aria-hidden />
+    ),
+  },
+);
 
 interface SlideEditorPanelProps {
   mode: "create" | "edit";
@@ -54,7 +77,7 @@ function emptySlide(courseId: string, order = 1): ISlide {
   return {
     title: "",
     content: "",
-    course: new Types.ObjectId(courseId),
+    course: new ObjectId(courseId),
     lesson: undefined,
     order,
     titleFont: "Inter",

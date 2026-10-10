@@ -18,7 +18,7 @@ import { BookOpen, Clock, GraduationCap, Save, X } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { ILesson, LessonDifficulty } from "@/types/lesson";
-import { Types } from "mongoose";
+import { ObjectId } from "@/lib/object-id";
 
 interface LessonDetailsPanelProps {
   mode: "create" | "edit";
@@ -33,7 +33,7 @@ function emptyLesson(courseId: string): ILesson {
   return {
     title: "",
     description: "",
-    courseId: new Types.ObjectId(courseId),
+    courseId: new ObjectId(courseId),
     slides: [],
     difficulty: LessonDifficulty.BEGINNER,
     duration: 30,

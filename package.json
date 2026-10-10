@@ -11,7 +11,8 @@
     "build": "next build",
     "start": "next start -H 0.0.0.0",
     "lint": "eslint .",
-    "test": "node --experimental-strip-types --test lib/courses/organization-association.test.ts lib/api/student-identity.test.ts"
+    "analyze": "ANALYZE=true next build --webpack",
+    "test": "node --experimental-strip-types --test lib/courses/organization-association.test.ts lib/api/student-identity.test.ts lib/app-urls.test.ts lib/prefetch-request.test.ts lib/object-id.test.ts"
   },
   "dependencies": {
     "@emotion/is-prop-valid": "^1.4.0",
@@ -96,6 +97,7 @@
     "zod": "^3.25.42"
   },
   "devDependencies": {
+    "@next/bundle-analyzer": "^16.4.0",
     "@types/node": "^22.19.3",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19",

@@ -1,6 +1,6 @@
 import type { IOrganization } from "@/types/organization";
 import type { IUser } from "@/types/user";
-import { Types } from "mongoose";
+import { ObjectId } from "@/lib/object-id";
 import { apiFetch, ApiError } from "@/lib/api/utils";
 
 function defaultOrganization(user: IUser, userId?: string): IOrganization {
@@ -23,7 +23,7 @@ function defaultOrganization(user: IUser, userId?: string): IOrganization {
       phone: "",
       contactPerson: user.name,
     },
-    subscription: new Types.ObjectId(),
+    subscription: new ObjectId(),
     teachers: [],
     students: [],
     courses: [],

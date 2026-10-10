@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { authAppUrl, authServiceUrl } from "@/lib/app-urls";
-
-const AUTH_SERVICE_URL = authServiceUrl();
-const AUTH_BASE = AUTH_SERVICE_URL.replace(/\/$/, "") + "/api/v1";
+import { authAppUrl } from "@/lib/app-urls";
+import { fetchAuthService } from "@/lib/server/same-host-fetch";
 
 const AUTH_APP_URL = authAppUrl();
 
@@ -20,7 +18,7 @@ export async function POST(request: NextRequest) {
   try {
     // Forward the app-domain cookie header so auth-api can find `session`.
     // auth-api reads `r.Cookie("session")`, so only the cookie name matters.
-    await fetch(`${AUTH_BASE}/auth/logout`, {
+    await fetchAuthService("/api/v1/auth/logout", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

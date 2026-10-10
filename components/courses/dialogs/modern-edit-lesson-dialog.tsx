@@ -25,7 +25,7 @@ import { BookOpen, Clock, GraduationCap, X } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "@/hooks/use-toast";
 import { ILesson, LessonDifficulty } from "@/types/lesson";
-import { Types } from "mongoose";
+import { ObjectId } from "@/lib/object-id";
 import { cn } from "@/lib/utils";
 
 interface ModernEditLessonDialogProps {
@@ -46,7 +46,7 @@ export function ModernEditLessonDialog({
   const [formData, setFormData] = useState<ILesson>({
     title: "",
     description: "",
-    courseId: new Types.ObjectId(),
+    courseId: new ObjectId(),
     slides: [],
     difficulty: LessonDifficulty.BEGINNER,
     duration: 30,
@@ -65,7 +65,7 @@ export function ModernEditLessonDialog({
       setFormData({
         title: "",
         description: "",
-        courseId: new Types.ObjectId(),
+        courseId: new ObjectId(),
         slides: [],
         difficulty: LessonDifficulty.BEGINNER,
         duration: 30,

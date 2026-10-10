@@ -1,4 +1,4 @@
-import { Types } from "mongoose";
+import { ObjectId } from "@/lib/object-id";
 
 // Enums
 export enum ClassUserType {
@@ -33,9 +33,9 @@ export interface IClass {
   description?: string;
   status?: string; // "Active", "Inactive", "Draft", etc.
   createdBy: IClassCreator;
-  organizationId?: Types.ObjectId;
-  courses: Types.ObjectId[];
-  students: Types.ObjectId[];
+  organizationId?: ObjectId;
+  courses: ObjectId[];
+  students: ObjectId[];
   maxStudents?: number;
   isActive: boolean;
   startDate?: Date;
@@ -119,8 +119,8 @@ export interface IClassStats {
 // Organization Application interfaces
 export interface IOrganizationApplication {
   id: string;
-  organizationId: Types.ObjectId;
-  classId: Types.ObjectId;
+  organizationId: ObjectId;
+  classId: ObjectId;
   status: string;
   message?: string;
   reviewMessage?: string;

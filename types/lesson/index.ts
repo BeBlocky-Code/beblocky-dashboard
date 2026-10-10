@@ -1,4 +1,4 @@
-import { Types } from "mongoose";
+import { ObjectId } from "@/lib/object-id";
 
 export enum LessonDifficulty {
   BEGINNER = "Beginner",
@@ -10,8 +10,8 @@ export interface ILesson {
   _id?: string; // MongoDB ObjectId as string
   title: string;
   description?: string;
-  courseId: Types.ObjectId;
-  slides: Types.ObjectId[];
+  courseId: ObjectId;
+  slides: ObjectId[];
   difficulty: LessonDifficulty;
   duration: number;
   tags: string[];
@@ -22,8 +22,8 @@ export interface ILesson {
 export interface ICreateLessonDto {
   title: string;
   description?: string;
-  courseId: Types.ObjectId;
-  slides?: Types.ObjectId[];
+  courseId: ObjectId;
+  slides?: ObjectId[];
   difficulty?: LessonDifficulty;
   duration: number;
   tags?: string[];
@@ -32,9 +32,9 @@ export interface ICreateLessonDto {
 export type IUpdateLessonDto = Partial<ICreateLessonDto>;
 
 export interface IAddSlideDto {
-  slideId: Types.ObjectId;
+  slideId: ObjectId;
 }
 
 export interface IReorderLessonsDto {
-  lessonIds: Types.ObjectId[];
+  lessonIds: ObjectId[];
 }

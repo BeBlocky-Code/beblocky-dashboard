@@ -15,7 +15,7 @@ import { motion } from "framer-motion";
 import { ILesson } from "@/types/lesson";
 import { toast } from "@/hooks/use-toast";
 import { ISlide } from "@/types/slide";
-import { Types } from "mongoose";
+import { ObjectId } from "@/lib/object-id";
 import {
   createSlideWithImages,
   updateSlide,
@@ -53,7 +53,7 @@ export function ModernEditSlideDialog({
   const [formData, setFormData] = useState<ISlide>({
     title: "",
     content: "",
-    course: new Types.ObjectId(courseId),
+    course: new ObjectId(courseId),
     lesson: undefined,
     order: 1,
     titleFont: "Inter",
@@ -88,7 +88,7 @@ export function ModernEditSlideDialog({
       setFormData({
         title: "",
         content: "",
-        course: new Types.ObjectId(courseId),
+        course: new ObjectId(courseId),
         lesson: undefined,
         order: 1,
         titleFont: "Inter",

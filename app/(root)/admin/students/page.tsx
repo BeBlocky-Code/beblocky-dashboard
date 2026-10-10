@@ -38,7 +38,6 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { useAllStudents, useAllProgress } from "@/lib/hooks/queries";
 import type { ICourseProgress } from "@/lib/api/progress";
@@ -405,14 +404,16 @@ export default function AdminStudentsPage() {
           </div>
         </div>
 
-        <IncompleteProfileNotice
-          students={incompleteProfiles}
-          totalStudents={analytics.total}
-          ready={!isStudentsLoading}
-        />
+        <div className="mb-6 min-h-[4.5rem]">
+          <IncompleteProfileNotice
+            students={incompleteProfiles}
+            totalStudents={analytics.total}
+            ready={!isStudentsLoading}
+          />
+        </div>
 
         {/* Primary stats */}
-        <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="mb-6 grid min-h-[9.5rem] grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
           <StatCard
             title="Total Students"
             value={analytics.total.toString()}
@@ -764,16 +765,11 @@ function StatCard({
   hint,
   icon: Icon,
   iconClass,
-  delay,
   isLoading = false,
 }: StatCardProps) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35, delay }}
-    >
-      <Card className="h-full rounded-2xl border border-border/40 bg-card/40 shadow-sm backdrop-blur-sm transition-colors hover:bg-card/60">
+    <div>
+      <Card className="h-full min-h-[9.5rem] rounded-2xl border border-border/40 bg-card/40 shadow-sm backdrop-blur-sm transition-colors hover:bg-card/60">
         <div className="p-5">
           <div
             className={cn(
@@ -792,12 +788,12 @@ function StatCard({
           >
             {value}
           </p>
-          {hint && (
-            <p className="mt-1 text-[11px] text-muted-foreground">{hint}</p>
-          )}
+          <p className="mt-1 min-h-4 text-[11px] text-muted-foreground">
+            {hint ?? ""}
+          </p>
         </div>
       </Card>
-    </motion.div>
+    </div>
   );
 }
 

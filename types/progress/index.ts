@@ -1,10 +1,10 @@
-import { Types } from "mongoose";
+import { ObjectId } from "@/lib/object-id";
 
 export interface IProgress {
   userId: string; // String ID from better-auth
-  courseId: Types.ObjectId;
-  lessonId: Types.ObjectId;
-  slideId: Types.ObjectId;
+  courseId: ObjectId;
+  lessonId: ObjectId;
+  slideId: ObjectId;
   isCompleted: boolean;
   timeSpent: number; // in minutes
   codeAttempts: number;

@@ -1,4 +1,4 @@
-import { Types } from "mongoose";
+import { ObjectId } from "@/lib/object-id";
 import { ICreateUserDto, IUpdateUserDto } from "../user";
 
 export enum Gender {
@@ -23,9 +23,9 @@ export interface IStudent {
   dateOfBirth?: Date;
   grade?: number;
   gender?: Gender;
-  schoolId?: Types.ObjectId;
-  parentId?: Types.ObjectId;
-  enrolledCourses: Types.ObjectId[];
+  schoolId?: ObjectId;
+  parentId?: ObjectId;
+  enrolledCourses: ObjectId[];
   coins: number;
   codingStreak: number; // Current coding streak
   lastCodingActivity: Date; // Last coding activity for streak
@@ -43,9 +43,9 @@ export interface ICreateStudentDto extends ICreateUserDto {
   dateOfBirth?: Date;
   grade?: number;
   gender?: Gender;
-  schoolId?: Types.ObjectId;
-  parentId?: Types.ObjectId;
-  enrolledCourses?: Types.ObjectId[];
+  schoolId?: ObjectId;
+  parentId?: ObjectId;
+  enrolledCourses?: ObjectId[];
   coins?: number;
   codingStreak?: number;
   lastCodingActivity?: Date;
@@ -61,7 +61,7 @@ export type IUpdateStudentDto = Partial<ICreateStudentDto> &
   Partial<IUpdateUserDto>;
 
 export interface IEnrollCourseDto {
-  courseId: Types.ObjectId;
+  courseId: ObjectId;
 }
 
 export interface IAddCoinsDto {

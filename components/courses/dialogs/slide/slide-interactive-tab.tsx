@@ -1,8 +1,18 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { Label } from "@/components/ui/label";
 import { ISlide } from "@/types/slide";
-import MarkdownEditor from "@/components/markdown/modern-editor";
+
+const MarkdownEditor = dynamic(
+  () => import("@/components/markdown/modern-editor"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="min-h-[26rem] rounded-xl bg-muted/30" aria-hidden />
+    ),
+  },
+);
 
 interface SlideInteractiveTabProps {
   formData: ISlide;

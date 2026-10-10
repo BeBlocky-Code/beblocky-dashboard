@@ -1,5 +1,3 @@
-import { Types } from "mongoose";
-
 export enum SubscriptionType {
   FREE = "free",
   STARTER = "starter",
