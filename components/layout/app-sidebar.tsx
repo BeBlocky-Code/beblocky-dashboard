@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
-import { motion } from "framer-motion";
 import {
   BookOpen,
   Building2,
@@ -117,53 +116,59 @@ export function AppSidebar() {
     <div className="flex h-screen">
       <div
         className={cn(
-          "relative flex flex-col bg-card border-r border-border transition-all duration-300",
-          isCollapsed ? "w-16" : "w-64",
+          "relative flex w-64 max-md:w-16 flex-col border-r border-border bg-card transition-all duration-300",
+          isCollapsed && "md:w-16",
         )}
       >
-        <motion.button
+        <button
           type="button"
           onClick={toggleCollapsed}
           aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           className={cn(
-            "absolute top-4 z-20",
+            "absolute top-4 z-20 max-md:hidden",
             "flex h-8 w-8 items-center justify-center rounded-full border-2 border-border bg-card shadow-lg",
             "transition-all duration-300 hover:scale-110 hover:border-primary/50 hover:bg-primary/5 hover:shadow-xl",
             isCollapsed ? "left-12" : "left-60",
-            isMobile && "hidden",
           )}
-          whileHover={{ scale: isMobile ? 1 : 1.1 }}
-          whileTap={{ scale: isMobile ? 1 : 0.96 }}
-          disabled={isMobile}
         >
-          <motion.div
-            animate={{ rotate: isCollapsed ? 180 : 0 }}
-            transition={{ duration: 0.3, ease: "easeInOut" }}
-          >
-            <ChevronLeft className="h-4 w-4 text-muted-foreground" />
-          </motion.div>
-        </motion.button>
+          <ChevronLeft
+            className={cn(
+              "h-4 w-4 text-muted-foreground transition-transform duration-300",
+              isCollapsed && "rotate-180",
+            )}
+          />
+        </button>
 
-        <motion.div
-          className="relative p-6"
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <div className="flex items-center justify-center">
+        <div className="relative p-6">
+          <div className="flex h-10 items-center justify-center">
             <Link
               href="/courses"
+              prefetch={false}
               className={cn("flex items-center gap-2", isCollapsed && "justify-center")}
             >
               <Image
-                src={isCollapsed ? iconLogo : logo}
+                src={logo}
                 alt="BeBlocky"
-                width={isCollapsed ? 40 : 150}
-                height={isCollapsed ? 40 : 150}
+                width={150}
+                height={40}
+                className={cn(
+                  "h-10 w-auto max-md:hidden",
+                  isCollapsed && "md:hidden",
+                )}
+              />
+              <Image
+                src={iconLogo}
+                alt=""
+                width={40}
+                height={40}
+                className={cn(
+                  "hidden h-10 w-10 max-md:block",
+                  isCollapsed && "md:block",
+                )}
               />
             </Link>
           </div>
-        </motion.div>
+        </div>
 
         <div className={cn("space-y-4 px-6 pb-4", isCollapsed && "px-2")}>
           <div
@@ -182,17 +187,12 @@ export function AppSidebar() {
         </div>
 
         <nav className={cn("flex-1 space-y-2", isCollapsed ? "px-2" : "px-4")}>
-          {visibleItems.map((item, index) => {
+          {visibleItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.href);
             return (
-              <motion.div
-                key={item.href}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.1, duration: 0.3 }}
-              >
-                <Link href={item.href}>
+              <div key={item.href}>
+                <Link href={item.href} prefetch={false}>
                   <div
                     className={cn(
                       "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 hover:bg-accent hover:text-accent-foreground",
@@ -214,7 +214,7 @@ export function AppSidebar() {
                     {!isCollapsed && <span className="flex-1">{item.title}</span>}
                   </div>
                 </Link>
-              </motion.div>
+              </div>
             );
           })}
         </nav>

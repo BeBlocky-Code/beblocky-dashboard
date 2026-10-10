@@ -1,4 +1,4 @@
-import { Types } from "mongoose";
+import { ObjectId } from "@/lib/object-id";
 import { ICreateUserDto, IUpdateUserDto } from "../user";
 
 export interface IQualification {
@@ -19,10 +19,10 @@ export interface ITeacher {
   qualifications: IQualification[];
   availability: Map<string, ITimeSlot[]>;
   rating: number[];
-  courses: Types.ObjectId[];
-  organizationId: Types.ObjectId;
+  courses: ObjectId[];
+  organizationId: ObjectId;
   languages: string[];
-  subscription?: Types.ObjectId;
+  subscription?: ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -31,10 +31,10 @@ export interface ICreateTeacherDto extends ICreateUserDto {
   qualifications?: IQualification[];
   availability?: Map<string, ITimeSlot[]>;
   rating?: number[];
-  courses?: Types.ObjectId[];
-  organizationId: Types.ObjectId;
+  courses?: ObjectId[];
+  organizationId: ObjectId;
   languages?: string[];
-  subscription?: Types.ObjectId;
+  subscription?: ObjectId;
 }
 
 export type IUpdateTeacherDto = Partial<ICreateTeacherDto> &

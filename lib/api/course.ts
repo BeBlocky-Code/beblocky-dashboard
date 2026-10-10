@@ -7,17 +7,17 @@ import {
 } from "@/types/course";
 import { ILesson, ICreateLessonDto } from "@/types/lesson";
 import { ISlide, ICreateSlideDto } from "@/types/slide";
-import { Types } from "mongoose";
+import { ObjectId } from "@/lib/object-id";
 import { formatRelativeTime } from "@/lib/utils";
 import { apiFetch, toRefId, toRefIdList } from "@/lib/api/utils";
 
-function toObjectIdList(values: unknown): Types.ObjectId[] {
-  return toRefIdList(values).map((id) => new Types.ObjectId(id));
+function toObjectIdList(values: unknown): ObjectId[] {
+  return toRefIdList(values).map((id) => new ObjectId(id));
 }
 
-function toObjectIdOrNew(value: unknown): Types.ObjectId {
+function toObjectIdOrNew(value: unknown): ObjectId {
   const id = toRefId(value);
-  return id ? new Types.ObjectId(id) : new Types.ObjectId();
+  return id ? new ObjectId(id) : new ObjectId();
 }
 
 // Types for the client-side course with additional computed properties
@@ -295,7 +295,7 @@ export async function createSlide(
     title: slideData.title,
     order: slideData.order,
     courseId: slideData.courseId,
-    lessonId: slideData.lessonId || new Types.ObjectId(), // Add required lessonId
+    lessonId: slideData.lessonId || new ObjectId(), // Add required lessonId
   };
 
   if (slideData.content) apiPayload.content = slideData.content;

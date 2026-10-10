@@ -1,8 +1,25 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { ModernCourseGrid } from "./modern-course-grid";
-import { ModernCourseStats } from "./modern-course-stats";
+
+const ModernCourseStats = dynamic(
+  () =>
+    import("./modern-course-stats").then((mod) => mod.ModernCourseStats),
+  {
+    loading: () => (
+      <div className="mb-8 grid min-h-[8.5rem] grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <div
+            key={index}
+            className="min-h-[8.5rem] rounded-2xl border border-border/40 bg-card/40"
+          />
+        ))}
+      </div>
+    ),
+  },
+);
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 

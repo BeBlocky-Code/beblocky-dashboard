@@ -42,7 +42,7 @@ import {
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ICourse } from "@/types/course";
-import { Types } from "mongoose";
+import { ObjectId } from "@/lib/object-id";
 import { apiFetch } from "@/lib/api/utils";
 
 interface ModernCourseCreationFlowProps {

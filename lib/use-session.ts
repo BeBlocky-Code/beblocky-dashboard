@@ -3,6 +3,7 @@
 import { useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { clearSessionCache, getSession, type SessionData } from "./auth-client";
+import { useWorkspaceSession } from "./workspace-session-context";
 
 const SESSION_QUERY_KEY = ["session"] as const;
 
@@ -12,6 +13,7 @@ const SESSION_QUERY_KEY = ["session"] as const;
  */
 export function useSession() {
   const queryClient = useQueryClient();
+  const seeded = useWorkspaceSession();
 
   const query = useQuery({
     queryKey: SESSION_QUERY_KEY,
@@ -19,6 +21,7 @@ export function useSession() {
       const { data } = await getSession();
       return data ?? null;
     },
+    initialData: seeded ?? undefined,
     staleTime: 5 * 60 * 1000,
     refetchOnMount: false,
     refetchOnWindowFocus: false,

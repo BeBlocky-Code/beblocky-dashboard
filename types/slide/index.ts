@@ -1,4 +1,4 @@
-import { Types } from "mongoose";
+import { ObjectId } from "@/lib/object-id";
 
 // Define ThemeColorsDto locally since the import doesn't exist
 export interface ThemeColorsDto {
@@ -10,8 +10,8 @@ export interface ISlide {
   _id?: string; // MongoDB ObjectId as string
   title: string;
   content?: string;
-  course: Types.ObjectId;
-  lesson?: Types.ObjectId;
+  course: ObjectId;
+  lesson?: ObjectId;
   order: number;
   titleFont: string;
   startingCode?: string;
@@ -31,8 +31,8 @@ export interface ICreateSlideDto {
   title: string;
   content?: string;
   order: number;
-  courseId: Types.ObjectId;
-  lessonId: Types.ObjectId;
+  courseId: ObjectId;
+  lessonId: ObjectId;
   titleFont?: string;
   contentFont?: string;
   startingCode?: string;

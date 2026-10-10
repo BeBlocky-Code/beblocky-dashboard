@@ -6,10 +6,11 @@ import {
   buildSessionCookieHeader,
   normalizeSessionToken,
 } from "@/lib/auth-callback";
-import { authAppUrl, authServiceUrl } from "@/lib/app-urls";
+import { authAppUrl } from "@/lib/app-urls";
+import { isPrefetchRequest } from "@/lib/prefetch-request";
+import { fetchAuthService } from "@/lib/server/same-host-fetch";
 
 const AUTH_APP_URL = authAppUrl();
-const AUTH_SERVICE_URL = authServiceUrl();
 
 const publicPaths = ["/sign-in", "/sign-up"];
 
@@ -51,15 +52,21 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL("/courses", request.url));
   }
 
-  if (sessionToken && !isPublicPath) {
+  // Next strips `next-router-prefetch` before proxy runs, so App Router
+  // prefetches are stopped with prefetch={false} on sidebar links. Browser
+  // prefetches that still send purpose / sec-purpose skip the session check.
+  // Cookie absence still redirects above.
+  if (
+    sessionToken &&
+    !isPublicPath &&
+    !isPrefetchRequest((name) => request.headers.get(name))
+  ) {
     try {
-      const base = AUTH_SERVICE_URL.replace(/\/$/, "");
-      const res = await fetch(`${base}/api/v1/account/complete`, {
+      const res = await fetchAuthService("/api/v1/account/complete", {
         headers: {
           Authorization: `Bearer ${sessionToken}`,
           Cookie: `session=${sessionToken}`,
         },
-        cache: "no-store",
       });
       if (res.status === 401) {
         const callbackUrl = buildCallbackUrl(request, AUTH_APP_URL);

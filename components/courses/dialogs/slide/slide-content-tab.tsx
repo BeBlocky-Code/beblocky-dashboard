@@ -14,7 +14,7 @@ import {
 import { Layers, BookOpen, AlertTriangle } from "lucide-react";
 import { ISlide } from "@/types/slide";
 import { ILesson } from "@/types/lesson";
-import { Types } from "mongoose";
+import { ObjectId } from "@/lib/object-id";
 
 interface SlideContentTabProps {
   formData: ISlide;
@@ -29,7 +29,7 @@ const getLessonId = (lesson: any): string => {
   console.log("getLessonId - lesson:", lesson);
   if (!lesson) return "";
   if (typeof lesson === "string") return lesson;
-  if (lesson instanceof Types.ObjectId) return lesson.toString();
+  if (lesson instanceof ObjectId) return lesson.toString();
   if (lesson && typeof lesson === "object") {
     // Handle lesson object with _id property
     if ("_id" in lesson) {
@@ -179,7 +179,7 @@ export function SlideContentTab({
             onValueChange={(value) => {
               const next: ISlide = {
                 ...formData,
-                lesson: new Types.ObjectId(value),
+                lesson: new ObjectId(value),
               };
               if (suggestOrderOnLessonChange) {
                 next.order = nextOrderForLesson(existingSlides, value);

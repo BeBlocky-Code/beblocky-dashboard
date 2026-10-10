@@ -1,4 +1,4 @@
-import { Types } from "mongoose";
+import { ObjectId } from "@/lib/object-id";
 
 export enum CourseSubscriptionType {
   FREE = "Free",
@@ -17,10 +17,10 @@ export interface ICourse {
   courseTitle: string;
   courseDescription: string;
   courseLanguage: string;
-  slides: Types.ObjectId[];
-  lessons: Types.ObjectId[];
-  students: Types.ObjectId[];
-  organization: Types.ObjectId[];
+  slides: ObjectId[];
+  lessons: ObjectId[];
+  students: ObjectId[];
+  organization: ObjectId[];
   subType: CourseSubscriptionType;
   status: CourseStatus;
   rating: number;
@@ -34,9 +34,9 @@ export interface ICreateCourseDto {
   courseDescription?: string;
   courseLanguage: string;
   userId?: string; // String ID from better-auth
-  lessonIds?: Types.ObjectId[];
-  slideIds?: Types.ObjectId[];
-  organization?: Types.ObjectId[];
+  lessonIds?: ObjectId[];
+  slideIds?: ObjectId[];
+  organization?: ObjectId[];
   subType?: CourseSubscriptionType;
   status?: CourseStatus;
   rating?: number;
@@ -62,7 +62,7 @@ export interface ICreateCourseWithContentDto {
 // Rating values are now simple numbers (1-5) instead of enum
 
 export interface ICourseRating {
-  courseId: Types.ObjectId;
+  courseId: ObjectId;
   userId: string; // String ID from better-auth
   rating: number; // Use number instead of RatingValue enum
   review?: string;

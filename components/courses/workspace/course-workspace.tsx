@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
@@ -8,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Eye, BookOpen } from "lucide-react";
 import { toast } from "sonner";
-import { Types } from "mongoose";
+import { ObjectId } from "@/lib/object-id";
 import {
   CourseStatus,
   CourseSubscriptionType,
@@ -43,7 +44,6 @@ import {
 import { CourseWorkspaceSidebar } from "./course-workspace-sidebar";
 import { CourseDetailsPanel } from "./panels/course-details-panel";
 import { LessonDetailsPanel } from "./panels/lesson-details-panel";
-import { SlideEditorPanel } from "./panels/slide-editor-panel";
 import { ChallengeEditorPanel } from "./panels/challenge-editor-panel";
 import {
   createChallenge,
@@ -54,6 +54,17 @@ import {
   type AuthoringChallenge,
   type ChallengeWriteBody,
 } from "@/lib/api/challenge";
+
+const SlideEditorPanel = dynamic(
+  () =>
+    import("./panels/slide-editor-panel").then((mod) => mod.SlideEditorPanel),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="min-h-[32rem] rounded-2xl bg-muted/30" aria-hidden />
+    ),
+  },
+);
 
 interface CourseWorkspaceProps {
   mode: "create" | "edit";
@@ -299,7 +310,7 @@ export function CourseWorkspace({ mode, courseId }: CourseWorkspaceProps) {
         const payload: ICreateLessonDto = {
           title: data.title,
           description: data.description || "",
-          courseId: new Types.ObjectId(resolvedCourseId),
+          courseId: new ObjectId(resolvedCourseId),
           difficulty: data.difficulty,
           duration: data.duration,
           tags: data.tags || [],
@@ -310,7 +321,7 @@ export function CourseWorkspace({ mode, courseId }: CourseWorkspaceProps) {
           prev
             ? {
                 ...prev,
-                lessons: [...prev.lessons, new Types.ObjectId(created._id)],
+                lessons: [...prev.lessons, new ObjectId(created._id)],
                 lessonsCount: (prev.lessonsCount || 0) + 1,
               }
             : prev
@@ -393,8 +404,8 @@ export function CourseWorkspace({ mode, courseId }: CourseWorkspaceProps) {
           title: data.title,
           content: data.content || "",
           order: data.order,
-          courseId: new Types.ObjectId(resolvedCourseId),
-          lessonId: new Types.ObjectId(lessonId),
+          courseId: new ObjectId(resolvedCourseId),
+          lessonId: new ObjectId(lessonId),
           titleFont: data.titleFont || "Inter",
           startingCode: data.startingCode || "",
           solutionCode: data.solutionCode || "",
@@ -412,7 +423,7 @@ export function CourseWorkspace({ mode, courseId }: CourseWorkspaceProps) {
           prev
             ? {
                 ...prev,
-                slides: [...prev.slides, new Types.ObjectId(created._id)],
+                slides: [...prev.slides, new ObjectId(created._id)],
                 slidesCount: (prev.slidesCount || 0) + 1,
               }
             : prev
@@ -433,7 +444,7 @@ export function CourseWorkspace({ mode, courseId }: CourseWorkspaceProps) {
             content: data.content,
             order: data.order,
             lesson: newLessonId
-              ? new Types.ObjectId(newLessonId)
+              ? new ObjectId(newLessonId)
               : undefined,
             titleFont: data.titleFont,
             startingCode: data.startingCode,

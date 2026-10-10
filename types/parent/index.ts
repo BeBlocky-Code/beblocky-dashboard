@@ -1,10 +1,10 @@
-import { Types } from "mongoose";
+import { ObjectId } from "@/lib/object-id";
 import { ICreateUserDto, IUpdateUserDto } from "../user";
 
 export interface IParent {
   _id?: string; // MongoDB ObjectId as string
   userId: string; // String ID from better-auth
-  children: Types.ObjectId[]; // Array of student IDs
+  children: ObjectId[]; // Array of student IDs
   phoneNumber: string;
   address: {
     street: string;
@@ -28,7 +28,7 @@ export interface IParent {
 }
 
 export interface ICreateParentDto extends ICreateUserDto {
-  children?: Types.ObjectId[];
+  children?: ObjectId[];
   phoneNumber: string;
   address: {
     street: string;

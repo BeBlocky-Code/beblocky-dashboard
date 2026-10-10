@@ -79,3 +79,20 @@ export function authServiceUrl(): string {
     developmentUrl: DEV_AUTH_SERVICE_URL,
   });
 }
+
+/**
+ * Origin for auth-service calls made by the Next.js server (proxy, route
+ * handlers, server layouts). Prefers AUTH_SERVICE_INTERNAL_URL, the Docker
+ * address, and falls back to the public URL.
+ *
+ * Browser code must keep using authServiceUrl(). An internal hostname in a
+ * NEXT_PUBLIC_ var is inlined into the client bundle and breaks login.
+ * The internal var is read with a computed key so the production image can
+ * receive it at container start; NEXT_PUBLIC_ values are frozen at build.
+ */
+export function authServiceServerUrl(): string {
+  if (typeof window !== "undefined") return authServiceUrl();
+  const internal = process.env["AUTH_SERVICE_INTERNAL_URL"]?.trim();
+  if (internal) return internal.replace(/\/$/, "");
+  return authServiceUrl();
+}

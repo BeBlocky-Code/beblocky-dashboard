@@ -26,10 +26,11 @@ function PageHeaderSkeleton({
 
 function StatCardSkeleton() {
   return (
-    <Card className="rounded-2xl border border-border/40 bg-card/40 p-5 shadow-sm backdrop-blur-sm">
+    <Card className="min-h-[9.5rem] rounded-2xl border border-border/40 bg-card/40 p-5 shadow-sm backdrop-blur-sm">
       <Skeleton className="mb-4 h-11 w-11 rounded-2xl" />
       <Skeleton className="h-3 w-20" />
       <Skeleton className="mt-2 h-7 w-16" />
+      <Skeleton className="mt-2 h-3 w-24" />
     </Card>
   );
 }
@@ -264,7 +265,11 @@ export function AdminStudentsSkeleton() {
           </div>
         </div>
 
-        <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="mb-6 min-h-[4.5rem]">
+          <Skeleton className="h-[4.5rem] w-full rounded-2xl" />
+        </div>
+
+        <div className="mb-6 grid min-h-[9.5rem] grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
             <StatCardSkeleton key={i} />
           ))}
