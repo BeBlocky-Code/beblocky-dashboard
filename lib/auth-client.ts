@@ -54,6 +54,7 @@ let cachedSession: {
   error?: { code: string; message: string };
 } | null = null;
 let cachedSessionAt = 0;
+let cachedSessionToken: string | undefined;
 let sessionInflight: Promise<{
   data?: SessionData;
   error?: { code: string; message: string };
@@ -63,7 +64,23 @@ const SESSION_TTL_MS = 5 * 60 * 1000;
 export function clearSessionCache() {
   cachedSession = null;
   cachedSessionAt = 0;
+  cachedSessionToken = undefined;
   sessionInflight = null;
+}
+
+/**
+ * Seed the client session cache from a server-verified session so that
+ * `useSession()` and `getApiAuthHeaders()` do not refetch after hydration.
+ * Safe to call during render; guarded to run once per token.
+ */
+export function seedSessionCache(session: SessionData) {
+  // Server renders share module state across requests; only seed in the browser.
+  if (typeof window === "undefined") return;
+  if (!session.valid || !session.token || !session.user?.id) return;
+  if (cachedSessionToken === session.token) return;
+  cachedSession = { data: session };
+  cachedSessionAt = Date.now();
+  cachedSessionToken = session.token;
 }
 
 export async function getSession(): Promise<{
@@ -76,23 +93,29 @@ export async function getSession(): Promise<{
   if (sessionInflight) return sessionInflight;
 
   sessionInflight = (async () => {
-    const {
-      data: sessionData,
-      error,
-      status,
-    } = await authFetch<{
-      valid?: boolean;
-      user?: { id: string };
-      token?: string;
-    }>("/auth/session");
-    if (status === 200 && sessionData?.valid && sessionData?.user?.id) {
-      const user: SessionUser = { id: sessionData.user.id };
-      const accountRes = await authFetch<{
+    const [
+      {
+        data: sessionData,
+        error,
+        status,
+      },
+      accountRes,
+    ] = await Promise.all([
+      authFetch<{
+        valid?: boolean;
+        user?: { id: string };
+        token?: string;
+      }>("/auth/session"),
+      authFetch<{
         name?: string;
         email?: string;
         image_url?: string;
         roles?: string[];
-      }>("/account");
+      }>("/account"),
+    ]);
+
+    if (status === 200 && sessionData?.valid && sessionData?.user?.id) {
+      const user: SessionUser = { id: sessionData.user.id };
       if (accountRes.data) {
         user.name = accountRes.data.name;
         user.email = accountRes.data.email;
@@ -104,6 +127,9 @@ export async function getSession(): Promise<{
       };
       cachedSession = result;
       cachedSessionAt = Date.now();
+      if (sessionData.token) {
+        cachedSessionToken = sessionData.token;
+      }
       return result;
     }
     return { data: { valid: false } as SessionData, error };
