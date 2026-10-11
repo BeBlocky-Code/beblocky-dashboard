@@ -65,6 +65,13 @@ export function AppSidebar() {
   const { data: session } = useSession();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  // Href of a sidebar link that was just clicked, shown as active right away
+  // instead of waiting for the RSC round trip to update usePathname(). It is
+  // tied to the pathname it was clicked from, so it drops once the URL changes.
+  const [pending, setPending] = useState<{ href: string; from: string } | null>(
+    null,
+  );
+  const pendingHref = pending && pending.from === path ? pending.href : null;
   const roles = session?.user?.roles ?? [];
 
   useEffect(() => {
@@ -105,8 +112,10 @@ export function AppSidebar() {
     });
   };
 
-  const isActive = (href: string) =>
-    path === href || path.startsWith(`${href}/`);
+  const isActive = (href: string) => {
+    if (pendingHref !== null) return pendingHref === href;
+    return path === href || path.startsWith(`${href}/`);
+  };
 
   const visibleItems = navItems.filter((item) =>
     item.roles.some((allowed) => roles.includes(allowed)),
@@ -192,7 +201,24 @@ export function AppSidebar() {
             const active = isActive(item.href);
             return (
               <div key={item.href}>
-                <Link href={item.href} prefetch={false}>
+                <Link
+                  href={item.href}
+                  prefetch={false}
+                  onClick={(e) => {
+                    if (
+                      e.metaKey ||
+                      e.ctrlKey ||
+                      e.shiftKey ||
+                      e.altKey ||
+                      e.button !== 0
+                    ) {
+                      return;
+                    }
+                    if (item.href !== path) {
+                      setPending({ href: item.href, from: path });
+                    }
+                  }}
+                >
                   <div
                     className={cn(
                       "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 hover:bg-accent hover:text-accent-foreground",

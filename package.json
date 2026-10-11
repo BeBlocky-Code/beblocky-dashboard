@@ -12,7 +12,7 @@
     "start": "next start -H 0.0.0.0",
     "lint": "eslint .",
     "analyze": "ANALYZE=true next build --webpack",
-    "test": "node --experimental-strip-types --test lib/courses/organization-association.test.ts lib/api/student-identity.test.ts lib/app-urls.test.ts lib/prefetch-request.test.ts lib/object-id.test.ts"
+    "test": "node --experimental-strip-types --test lib/courses/organization-association.test.ts lib/api/student-identity.test.ts lib/app-urls.test.ts lib/prefetch-request.test.ts lib/object-id.test.ts lib/session-token.test.ts"
   },
   "dependencies": {
     "@emotion/is-prop-valid": "^1.4.0",
